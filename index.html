@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>معامل النور</title>
+<style>
+:root {
+  --primary: #1a4a7a;
+  --primary-light: #2563a8;
+  --primary-dark: #0f2d4d;
+  --accent: #e8a020;
+  --accent-light: #f5c842;
+  --danger: #c0392b;
+  --success: #16a34a;
+  --warning: #d97706;
+  --bg: #f0f4f8;
+  --card: #ffffff;
+  --text: #1e2a3a;
+  --text-muted: #64748b;
+  --border: #cbd5e1;
+  --shift-color: #7c3aed;
+  --monthly-color: #0369a1;
+  --radius: 14px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; direction: rtl; }
+h1,h2,h3,h4 { font-weight: 700; }
+ 
+/* Nav */
+.nav { background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.nav-title { font-size: 18px; font-weight: 700; }
+.nav-sub { font-size: 11px; opacity: 0.75; }
+.sync-btn { background: var(--accent); color: #fff; border: none; border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.sync-btn.syncing { background: #888; }
+ 
+/* Tabs */
+.tabs { background: var(--primary-dark); display: flex; overflow-x: auto; scrollbar-width: none; position: sticky; top: 56px; z-index: 99; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: 0 0 auto; padding: 11px 16px; color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.2s; }
+.tab.active { color: var(--accent-light); border-bottom-color: var(--accent-light); }
+ 
+/* Page */
+.page { display: none; padding: 16px; max-width: 900px; margin: 0 auto; }
+.page.active { display: block; }
+ 
+/* Cards */
+.card { background: var(--card); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.card-title { font-size: 14px; font-weight: 700; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+ 
+/* Dashboard summary cards */
+.summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+.sum-card { background: var(--card); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); text-align: center; }
+.sum-card .label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.sum-card .value { font-size: 22px; font-weight: 700; color: var(--primary); }
+.sum-card .sub { font-size: 11px; color: var(--text-muted); }
+.sum-card.accent .value { color: var(--accent); }
+.sum-card.success .value { color: var(--success); }
+.sum-card.danger .value { color: var(--danger); }
+ 
+/* Employee row in attendance */
+.emp-card { background: var(--card); border-radius: 12px; margin-bottom: 10px; box-shadow: var(--shadow); overflow: hidden; }
+.emp-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; }
+.emp-name { font-size: 15px; font-weight: 700; }
+.emp-type-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+.emp-type-badge.shift { background: #ede9fe; color: var(--shift-color); }
+.emp-type-badge.monthly { background: #e0f2fe; color: var(--monthly-color); }
+.emp-stats { display: flex; gap: 12px; align-items: center; }
+.stat-chip { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 3px; }
+.stat-chip strong { color: var(--text); }
+.emp-body { border-top: 1px solid var(--border); padding: 12px 14px; display: none; }
+.emp-body.open { display: block; }
+ 
+/* Log table */
+.log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.log-table th { background: #f1f5f9; color: var(--text-muted); font-weight: 600; padding: 8px 6px; text-align: center; font-size: 11px; }
+.log-table td { padding: 7px 6px; text-align: center; border-bottom: 1px solid #f1f5f9; }
+.log-table tr.friday td { background: #fef9ec; }
+.log-table tr.double td { background: #f0fdf4; }
+.badge-friday { background: #fef3c7; color: #92400e; font-size: 10px; padding: 1px 5px; border-radius: 10px; }
+.badge-extra { background: #fee2e2; color: #991b1b; font-size: 10px; padding: 1px 5px; border-radius: 10px; }
+.badge-meal { background: #dcfce7; color: #166534; font-size: 10px; padding: 1px 5px; border-radius: 10px; }
+ 
+/* Form fields */
+.field-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.field-row label { font-size: 13px; color: var(--text-muted); min-width: 90px; }
+input[type=text], input[type=number], input[type=time], input[type=date], select, textarea {
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 14px;
+  font-family: inherit; color: var(--text); background: #fff; width: 100%; direction: rtl;
+  outline: none; transition: border 0.2s;
+}
+input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(37,99,168,0.1); }
+ 
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border: none; border-radius: 25px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:hover { background: var(--accent-light); color: #333; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+ 
+/* Transfer button */
+.transfer-bar { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; border-radius: 14px; padding: 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+.transfer-bar .desc { font-size: 13px; opacity: 0.85; }
+.transfer-bar .title { font-size: 16px; font-weight: 700; }
+ 
+/* Salary table */
+.salary-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.salary-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px; }
+.salary-table th { background: var(--primary); color: #fff; padding: 10px 8px; text-align: center; font-size: 12px; font-weight: 600; }
+.salary-table td { padding: 9px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; }
+.salary-table tr:hover td { background: #f8fafc; }
+.salary-table tr.total-row td { background: #1a4a7a10; font-weight: 700; color: var(--primary); border-top: 2px solid var(--primary); }
+.salary-table .shift-row td:first-child { border-right: 4px solid var(--shift-color); }
+.salary-table .monthly-row td:first-child { border-right: 4px solid var(--monthly-color); }
+.deduction { color: var(--danger); }
+.bonus { color: var(--success); }
+.net-salary { font-weight: 700; font-size: 15px; color: var(--primary); }
+ 
+/* Settings */
+.emp-setting-card { background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
+.emp-setting-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+ 
+/* Record */
+.record-month { background: var(--card); border-radius: 12px; margin-bottom: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.record-month-header { background: var(--primary); color: #fff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.record-month-body { padding: 14px; display: none; }
+.record-month-body.open { display: block; }
+ 
+/* Vacation */
+.vac-card { background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; }
+.vac-bar-wrap { flex: 1; margin: 0 14px; }
+.vac-bar { height: 8px; background: #e2e8f0; border-radius: 20px; overflow: hidden; }
+.vac-bar-fill { height: 100%; border-radius: 20px; transition: width 0.4s; }
+.vac-remaining { font-size: 18px; font-weight: 700; min-width: 40px; text-align: center; }
+ 
+/* Toast */
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e2a3a; color: #fff; padding: 12px 20px; border-radius: 25px; font-size: 13px; font-weight: 600; z-index: 9999; transition: transform 0.3s; pointer-events: none; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+ 
+/* Bottom safe area */
+.bottom-space { height: 20px; }
+ 
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: flex-end; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 20px 20px 0 0; padding: 20px; width: 100%; max-height: 80vh; overflow-y: auto; }
+.modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; color: var(--primary); }
+.modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+ 
+/* Special employee note */
+.special-note { background: #fef9ec; border: 1px solid #f5c842; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #78350f; margin-bottom: 10px; }
+ 
+/* Shift input row */
+.shift-input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.shift-input-row .field-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+ 
+/* Loading */
+.loading { text-align: center; padding: 30px; color: var(--text-muted); }
+.spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-left: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+ 
+/* Month selector */
+.month-bar { display: flex; align-items: center; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.month-nav { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--primary); padding: 4px 10px; }
+.month-display { font-size: 16px; font-weight: 700; color: var(--primary); }
+</style>
+</head>
+<body>
+ 
+<div class="nav">
+  <div>
+    <div class="nav-title">🔬 معامل النور</div>
+    <div class="nav-sub" id="nav-month-label"></div>
+  </div>
+  <button class="sync-btn" onclick="syncFromSheet()" id="sync-btn">🔄 تحديث الشيت</button>
+</div>
+ 
+<div class="tabs">
+  <div class="tab active" onclick="showPage('attendance')">🕐 الحضور</div>
+  <div class="tab" onclick="showPage('salaries')">💰 المرتبات</div>
+  <div class="tab" onclick="showPage('record')">📋 السجل</div>
+  <div class="tab" onclick="showPage('vacations')">🏖️ الإجازات</div>
+  <div class="tab" onclick="showPage('settings')">⚙️ الإعدادات</div>
+</div>
+ 
+<!-- ============ ATTENDANCE PAGE ============ -->
+<div class="page active" id="page-attendance">
+  <div class="month-bar">
+    <button class="month-nav" onclick="changeAttMonth(-1)">›</button>
+    <div class="month-display" id="att-month-display"></div>
+    <button class="month-nav" onclick="changeAttMonth(1)">‹</button>
+  </div>
+ 
+  <div class="summary-grid" id="att-summary-grid">
+    <div class="sum-card"><div class="label">إجمالي ساعات إضافي</div><div class="value" id="s-extra">0</div><div class="sub">ساعة</div></div>
+    <div class="sum-card accent"><div class="label">إجمالي وجبات</div><div class="value" id="s-meals">0</div><div class="sub">وجبة</div></div>
+    <div class="sum-card success"><div class="label">أيام جمعة</div><div class="value" id="s-fridays">0</div><div class="sub">يوم</div></div>
+    <div class="sum-card"><div class="label">إجمالي شيفتات</div><div class="value" id="s-shifts">0</div><div class="sub">شيفتة</div></div>
+  </div>
+ 
+  <div class="card">
+    <div class="card-title">📊 الشيت المتزامن</div>
+    <div id="sheet-status" class="loading">اضغط "تحديث الشيت" لجلب البيانات</div>
+  </div>
+ 
+  <div id="att-employees-list"></div>
+ 
+  <div class="transfer-bar">
+    <div>
+      <div class="title">📤 نقل للمرتبات</div>
+      <div class="desc">ينقل كل بيانات الحضور لصفحة المرتبات دفعة واحدة</div>
+    </div>
+    <button class="btn btn-accent" onclick="transferToSalaries()">نقل الآن</button>
+  </div>
+</div>
+ 
+<!-- ============ SALARIES PAGE ============ -->
+<div class="page" id="page-salaries">
+  <div class="month-bar">
+    <button class="month-nav" onclick="changeSalMonth(-1)">›</button>
+    <div class="month-display" id="sal-month-display"></div>
+    <button class="month-nav" onclick="changeSalMonth(1)">‹</button>
+  </div>
+ 
+  <div class="summary-grid">
+    <div class="sum-card success"><div class="label">إجمالي الشهر</div><div class="value" id="total-salary">0</div><div class="sub">جنيه</div></div>
+    <div class="sum-card"><div class="label">إجمالي حالات المعمل</div><div class="value" id="total-cases-display">—</div></div>
+    <div class="sum-card accent"><div class="label">قيمة التحسين</div><div class="value" id="improvement-val">—</div><div class="sub">جنيه/موظف</div></div>
+    <div class="sum-card"><div class="label">عدد أيام الشهر</div><div class="value" id="month-days-display">30</div><div class="sub">يوم</div></div>
+  </div>
+ 
+  <div class="card">
+    <div class="card-title">⚙️ إعدادات الشهر</div>
+    <div class="field-row">
+      <label>حالات المعمل</label>
+      <input type="number" id="total-cases" placeholder="مثال: 850" oninput="recalcAll()" style="max-width:150px">
+      <label style="margin-right:10px">أيام الشهر</label>
+      <select id="month-days" onchange="recalcAll()" style="max-width:100px">
+        <option value="28">28</option>
+        <option value="29">29</option>
+        <option value="30" selected>30</option>
+        <option value="31">31</option>
+      </select>
+    </div>
+  </div>
+ 
+  <div class="salary-table-wrap">
+    <table class="salary-table" id="salary-table">
+      <thead>
+        <tr>
+          <th>الموظف</th><th>النوع</th><th>الأساسي</th><th>الجمع</th>
+          <th>الإضافي</th><th>وجبات</th><th>حوافز</th><th>تحسين</th>
+          <th>خصم غياب</th><th>سلفة</th><th>مكافأة</th><th>الصافي</th>
+        </tr>
+      </thead>
+      <tbody id="salary-tbody"></tbody>
+      <tfoot><tr class="total-row"><td colspan="11">إجمالي الشهر</td><td id="grand-total">0</td></tr></tfoot>
+    </table>
+  </div>
+ 
+  <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn btn-success" onclick="saveSalaryMonth()">💾 حفظ الشهر</button>
+    <button class="btn btn-outline" onclick="exportCSV()">📊 تنزيل CSV</button>
+  </div>
+</div>
+ 
+<!-- ============ RECORD PAGE ============ -->
+<div class="page" id="page-record">
+  <div id="record-list"></div>
+</div>
+ 
+<!-- ============ VACATIONS PAGE ============ -->
+<div class="page" id="page-vacations">
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">🏖️ رصيد الإجازات – الحد السنوي 21 يوم</div>
+    <div id="vac-list"></div>
+  </div>
+</div>
+ 
+<!-- ============ SETTINGS PAGE ============ -->
+<div class="page" id="page-settings">
+  <div class="card">
+    <div class="card-title">🔗 رابط الشيت</div>
+    <div class="field-row">
+      <input type="text" id="sheet-url-input" placeholder="https://script.google.com/..." style="flex:1">
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="saveSheetUrl()">حفظ الرابط</button>
+  </div>
+ 
+  <div class="card">
+    <div class="card-title">👥 الموظفون</div>
+    <button class="btn btn-primary btn-sm" onclick="openAddEmpModal()" style="margin-bottom:12px">+ إضافة موظف</button>
+    <div id="settings-emp-list"></div>
+  </div>
+ 
+  <div class="card">
+    <div class="card-title">💾 النسخ الاحتياطي</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="backupData()">📥 حفظ نسخة احتياطية</button>
+      <button class="btn btn-outline" onclick="document.getElementById('restore-file').click()">📂 استعادة</button>
+      <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(event)">
+    </div>
+  </div>
+</div>
+ 
+<!-- Add/Edit Employee Modal -->
+<div class="modal-overlay" id="emp-modal">
+  <div class="modal">
+    <div class="modal-title" id="emp-modal-title">إضافة موظف جديد</div>
+    <div id="emp-modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEmployee()">حفظ</button>
+      <button class="btn btn-outline" onclick="closeModal('emp-modal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+ 
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+ 
+<div class="bottom-space"></div>
+ 
+<script>
+// ============ DATA ============
+const SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycby0McT1aEQbqpjr2ZDU848wzU08-idf4lvvVQFF0bQ/dev';
+const MEAL_PRICE = 50;
+const SHIFT_HOURS = 6;
+const MAX_VACATION = 21;
+ 
+const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+ 
+let currentAttMonth = new Date().getMonth();
+let currentAttYear = new Date().getFullYear();
+let currentSalMonth = new Date().getMonth();
+let currentSalYear = new Date().getFullYear();
+ 
+let sheetData = []; // raw rows from Google Sheet
+ 
+const defaultEmployees = [
+  { id: 1, name: 'أم كامل', type: 'monthly', salary: 3500, fridayRate: 450, officialDayRate: 0 },
+  { id: 2, name: 'أحمد الحسيني', type: 'shift', shiftRate: 160, fridayRate: 0, officialDayRate: 0 },
+  { id: 3, name: 'أم محمد', type: 'monthly', salary: 4500, fridayRate: 500, officialDayRate: 0, note: 'مرتب + 1500 توصيل عيانات' },
+  { id: 4, name: 'إسراء مهدي', type: 'shift', shiftRate: 150, fridayRate: 0, officialDayRate: 0 },
+  { id: 5, name: 'رحمه غرب', type: 'monthly', salary: 3300, fridayRate: 400, officialDayRate: 0 },
+  { id: 6, name: 'محمد عثمان', type: 'shift', shiftRate: 160, fridayRate: 0, officialDayRate: 0 },
+  { id: 7, name: 'محمد عاطف', type: 'shift', shiftRate: 150, fridayRate: 0, officialDayRate: 0 },
+  { id: 8, name: 'تامر', type: 'shift', shiftRate: 160, fridayRate: 0, officialDayRate: 0 },
+  { id: 9, name: 'وعد', type: 'shift', shiftRate: 160, fridayRate: 0, officialDayRate: 0 },
+  { id: 10, name: 'رحمه جمال', type: 'shift', shiftRate: 150, fridayRate: 0, officialDayRate: 0 },
+  { id: 11, name: 'شحته', type: 'shift', shiftRate: 160, fridayRate: 0, officialDayRate: 0 },
+  { id: 12, name: 'ربى', type: 'monthly', salary: 3000, fridayRate: 350, officialDayRate: 0 },
+  { id: 13, name: 'اسماء', type: 'monthly', salary: 3300, fridayRate: 400, officialDayRate: 0 },
+  { id: 14, name: 'غاده', type: 'monthly', salary: 3300, fridayRate: 400, officialDayRate: 0 },
+  { id: 15, name: 'نورهان', type: 'monthly', salary: 3000, fridayRate: 350, officialDayRate: 0 },
+  { id: 16, name: 'زهراء', type: 'monthly', salary: 2100, fridayRate: 300, officialDayRate: 0 },
+  { id: 17, name: 'محمد صلاح وهبه', type: 'shift', shiftRate: 0, fridayRate: 0, officialDayRate: 0, note: 'شيفت 5 ساعات يومياً (خاص)', specialHours: 5 },
+  { id: 18, name: 'د. إيهاب (والدك)', type: 'doctor', salary: 0, fridayRate: 0, note: 'يومان في الأسبوع – حضور وانصراف مرن', officialDayRate: 0 }
+];
+ 
+function loadEmployees() {
+  const stored = localStorage.getItem('nour_employees');
+  return stored ? JSON.parse(stored) : defaultEmployees;
+}
+function saveEmployees(emps) { localStorage.setItem('nour_employees', JSON.stringify(emps)); }
+function loadMonthData(year, month) {
+  const key = `nour_month_${year}_${month}`;
+  const stored = localStorage.getItem(key);
+  return stored ? JSON.parse(stored) : {};
+}
+function saveMonthData(year, month, data) {
+  localStorage.setItem(`nour_month_${year}_${month}`, JSON.stringify(data));
+}
+function loadRecord() {
+  const stored = localStorage.getItem('nour_record');
+  return stored ? JSON.parse(stored) : [];
+}
+function saveRecord(rec) { localStorage.setItem('nour_record', JSON.stringify(rec)); }
+function loadVacations() {
+  const stored = localStorage.getItem('nour_vacations');
+  return stored ? JSON.parse(stored) : {};
+}
+function saveVacations(vac) { localStorage.setItem('nour_vacations', JSON.stringify(vac)); }
+function getSheetUrl() { return localStorage.getItem('nour_sheet_url') || SHEET_URL_DEFAULT; }
+ 
+// ============ PAGE NAV ============
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const tabs = ['attendance','salaries','record','vacations','settings'];
+  document.querySelectorAll('.tab')[tabs.indexOf(name)].classList.add('active');
+  if (name === 'attendance') renderAttendance();
+  if (name === 'salaries') renderSalaries();
+  if (name === 'record') renderRecord();
+  if (name === 'vacations') renderVacations();
+  if (name === 'settings') renderSettings();
+}
+ 
+// ============ MONTH NAV ============
+function changeAttMonth(dir) {
+  currentAttMonth += dir;
+  if (currentAttMonth > 11) { currentAttMonth = 0; currentAttYear++; }
+  if (currentAttMonth < 0) { currentAttMonth = 11; currentAttYear--; }
+  renderAttendance();
+}
+function changeSalMonth(dir) {
+  currentSalMonth += dir;
+  if (currentSalMonth > 11) { currentSalMonth = 0; currentSalYear++; }
+  if (currentSalMonth < 0) { currentSalMonth = 11; currentSalYear--; }
+  renderSalaries();
+}
+ 
+function monthLabel(year, month) { return `${MONTHS_AR[month]} ${year}`; }
+ 
+// ============ SHEET SYNC ============
+async function syncFromSheet() {
+  const btn = document.getElementById('sync-btn');
+  const status = document.getElementById('sheet-status');
+  btn.classList.add('syncing');
+  btn.textContent = '⏳ جاري التحديث...';
+  status.innerHTML = '<span class="spinner"></span> جاري جلب بيانات الشيت...';
+  try {
+    const url = getSheetUrl();
+    const resp = await fetch(url, { redirect: 'follow' });
+    const text = await resp.text();
+    // Try JSON first, else parse CSV-like
+    let rows = [];
+    try {
+      const json = JSON.parse(text);
+      if (Array.isArray(json)) rows = json;
+      else if (json.values) rows = json.values;
+      else if (json.data) rows = json.data;
+    } catch(e) {
+      // Parse as tab/comma separated
+      rows = text.split('\n').filter(l => l.trim()).map(l => {
+        const cells = l.split('\t').map(c => c.trim());
+        if (cells.length < 2) return null;
+        return {
+          date: cells[0], day: cells[1], name: cells[2], type: cells[3],
+          role: cells[4], time: cells[5], distance: cells[6], status: cells[7]
+        };
+      }).filter(Boolean);
+    }
+    sheetData = rows;
+    localStorage.setItem('nour_sheet_cache', JSON.stringify({ ts: Date.now(), data: rows }));
+    processSheetData();
+    showToast(`✅ تم تحديث ${rows.length} صف من الشيت`);
+  } catch(e) {
+    // Try cache
+    const cached = localStorage.getItem('nour_sheet_cache');
+    if (cached) {
+      const c = JSON.parse(cached);
+      sheetData = c.data;
+      processSheetData();
+      const ago = Math.round((Date.now() - c.ts) / 60000);
+      status.innerHTML = `⚠️ تم استخدام نسخة محفوظة (منذ ${ago} دقيقة) – تحقق من الإنترنت`;
+    } else {
+      status.innerHTML = '❌ تعذر الاتصال بالشيت. تحقق من الرابط أو الإنترنت.';
+    }
+  }
+  btn.classList.remove('syncing');
+  btn.textContent = '🔄 تحديث الشيت';
+}
+ 
+function processSheetData() {
+  // Parse rows from sheet into per-employee attendance data
+  const status = document.getElementById('sheet-status');
+  const emps = loadEmployees();
+  const monthData = loadMonthData(currentAttYear, currentAttMonth) || {};
+ 
+  // Filter rows for current month
+  const filtered = sheetData.filter(row => {
+    const d = row.date || row[0] || '';
+    if (!d) return false;
+    const parts = d.split(/[\/\-\.]/);
+    let month, year;
+    if (parts.length >= 3) {
+      // try dd/mm/yyyy or yyyy/mm/dd
+      if (parseInt(parts[0]) > 31) { year = parseInt(parts[0]); month = parseInt(parts[1]) - 1; }
+      else { year = parseInt(parts[2]); month = parseInt(parts[1]) - 1; }
+    }
+    return month === currentAttMonth && year === currentAttYear;
+  });
+ 
+  // Group by employee name
+  const grouped = {};
+  filtered.forEach(row => {
+    const name = (row.name || row[2] || '').trim();
+    if (!name) return;
+    if (!grouped[name]) grouped[name] = [];
+    grouped[name].push(row);
+  });
+ 
+  // For each employee in our list, find their rows and compute stats
+  emps.forEach(emp => {
+    if (emp.type === 'doctor') return;
+    const rows = grouped[emp.name] || [];
+    if (!rows.length) return;
+    const stats = computeEmpStatsFromSheet(emp, rows);
+    if (!monthData[emp.id]) monthData[emp.id] = {};
+    Object.assign(monthData[emp.id], stats);
+  });
+ 
+  saveMonthData(currentAttYear, currentAttMonth, monthData);
+ 
+  status.innerHTML = `✅ ${filtered.length} سجل محمّل من الشيت – ${Object.keys(grouped).length} موظف`;
+  renderAttendance();
+}
+ 
+function computeEmpStatsFromSheet(emp, rows) {
+  const shiftHours = emp.specialHours || SHIFT_HOURS;
+  let totalMinutes = 0;
+  let fridays = 0;
+  let meals = 0;
+  let shifts = 0;
+ 
+  rows.forEach(row => {
+    const day = (row.day || row[1] || '').toLowerCase();
+    const time = row.time || row[5] || '';
+    if (!time) return;
+ 
+    // Parse duration from time field "HH:MM - HH:MM" or just hours
+    let durationMins = 0;
+    if (time.includes('-') || time.includes('–')) {
+      const parts = time.replace('–', '-').split('-').map(t => t.trim());
+      if (parts.length === 2) {
+        const start = parseTime(parts[0]);
+        const end = parseTime(parts[1]);
+        if (start !== null && end !== null) {
+          durationMins = ((end - start) + 1440) % 1440;
+        }
+      }
+    } else {
+      // assume it's total hours
+      durationMins = parseFloat(time) * 60 || 0;
+    }
+ 
+    totalMinutes += durationMins;
+    if (durationMins >= shiftHours * 60 * 2 - 30) meals++; // double shift = meal
+    if (day.includes('friday') || day.includes('جمعة') || day.includes('fri')) fridays++;
+    shifts += Math.floor(durationMins / (shiftHours * 60));
+  });
+ 
+  const extraHours = Math.max(0, (totalMinutes / 60) - (shifts * shiftHours));
+ 
+  return {
+    shifts,
+    extraHours: Math.round(extraHours * 10) / 10,
+    fridays,
+    meals,
+    fromSheet: true
+  };
+}
+ 
+function parseTime(t) {
+  t = t.trim();
+  const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/);
+  if (!m) return null;
+  let h = parseInt(m[1]), min = parseInt(m[2]);
+  if (m[3]) {
+    if ((m[3].toLowerCase() === 'pm') && h !== 12) h += 12;
+    if ((m[3].toLowerCase() === 'am') && h === 12) h = 0;
+  }
+  return h * 60 + min;
+}
+ 
+// ============ ATTENDANCE RENDER ============
+function renderAttendance() {
+  document.getElementById('att-month-display').textContent = monthLabel(currentAttYear, currentAttMonth);
+  document.getElementById('nav-month-label').textContent = monthLabel(currentAttYear, currentAttMonth);
+  const emps = loadEmployees();
+  const monthData = loadMonthData(currentAttYear, currentAttMonth);
+  const list = document.getElementById('att-employees-list');
+ 
+  let totalExtra = 0, totalMeals = 0, totalFridays = 0, totalShifts = 0;
+ 
+  list.innerHTML = emps.map(emp => {
+    if (emp.type === 'doctor') {
+      return `<div class="emp-card">
+        <div class="emp-header">
+          <div><div class="emp-name">${emp.name}</div><div style="font-size:11px;color:var(--text-muted)">${emp.note || 'دكتور – حضور مرن'}</div></div>
+          <span class="emp-type-badge monthly">دكتور</span>
+        </div>
+      </div>`;
+    }
+    const d = monthData[emp.id] || {};
+    const extra = d.extraHours || 0;
+    const meals = d.meals || 0;
+    const fridays = d.fridays || 0;
+    const shifts = d.shifts || 0;
+    totalExtra += extra; totalMeals += meals; totalFridays += fridays; totalShifts += shifts;
+ 
+    const sheetRows = getEmpSheetRows(emp);
+ 
+    return `<div class="emp-card">
+      <div class="emp-header" onclick="toggleEmp('emp-body-${emp.id}')">
+        <div>
+          <div class="emp-name">${emp.name} ${emp.note ? '⚠️' : ''}</div>
+          <div class="emp-stats">
+            ${emp.type === 'shift' ? `<div class="stat-chip">شيفتات: <strong>${shifts}</strong></div>` : ''}
+            <div class="stat-chip">إضافي: <strong>${extra}س</strong></div>
+            <div class="stat-chip">جمعة: <strong>${fridays}</strong></div>
+            <div class="stat-chip">وجبات: <strong>${meals}</strong></div>
+          </div>
+        </div>
+        <span class="emp-type-badge ${emp.type === 'shift' ? 'shift' : 'monthly'}">${emp.type === 'shift' ? 'شيفتات' : 'شهري'}</span>
+      </div>
+      <div class="emp-body" id="emp-body-${emp.id}">
+        ${emp.note ? `<div class="special-note">⚠️ ${emp.note}</div>` : ''}
+        <div style="margin-bottom:12px;">
+          ${renderEmpAttInputs(emp, d)}
+        </div>
+        ${sheetRows.length ? renderSheetLog(emp, sheetRows) : '<div style="font-size:12px;color:var(--text-muted)">لا توجد بيانات شيت لهذا الشهر</div>'}
+      </div>
+    </div>`;
+  }).join('');
+ 
+  document.getElementById('s-extra').textContent = totalExtra.toFixed(1);
+  document.getElementById('s-meals').textContent = totalMeals;
+  document.getElementById('s-fridays').textContent = totalFridays;
+  document.getElementById('s-shifts').textContent = totalShifts;
+}
+ 
+function getEmpSheetRows(emp) {
+  return sheetData.filter(row => {
+    const name = (row.name || row[2] || '').trim();
+    const d = row.date || row[0] || '';
+    const parts = d.split(/[\/\-\.]/);
+    let month, year;
+    if (parts.length >= 3) {
+      if (parseInt(parts[0]) > 31) { year = parseInt(parts[0]); month = parseInt(parts[1]) - 1; }
+      else { year = parseInt(parts[2]); month = parseInt(parts[1]) - 1; }
+    }
+    return name === emp.name && month === currentAttMonth && year === currentAttYear;
+  });
+}
+ 
+function renderSheetLog(emp, rows) {
+  const shiftHours = emp.specialHours || SHIFT_HOURS;
+  return `<div style="margin-top:10px">
+    <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px;">📊 سجل الشيت</div>
+    <div style="overflow-x:auto"><table class="log-table">
+      <thead><tr><th>التاريخ</th><th>اليوم</th><th>الوقت</th><th>المدة</th><th>ملاحظات</th></tr></thead>
+      <tbody>${rows.map(row => {
+        const day = (row.day || row[1] || '').toLowerCase();
+        const time = row.time || row[5] || '';
+        const isFriday = day.includes('friday') || day.includes('جمعة') || day.includes('fri');
+        let durationMins = 0;
+        if (time.includes('-') || time.includes('–')) {
+          const parts = time.replace('–', '-').split('-').map(t => t.trim());
+          if (parts.length === 2) {
+            const s = parseTime(parts[0]), e = parseTime(parts[1]);
+            if (s !== null && e !== null) durationMins = ((e - s) + 1440) % 1440;
+          }
+        } else durationMins = parseFloat(time) * 60 || 0;
+        const hrs = (durationMins / 60).toFixed(1);
+        const isDouble = durationMins >= shiftHours * 60 * 2 - 30;
+        const extraMins = Math.max(0, durationMins - shiftHours * 60);
+        const cls = isFriday ? 'friday' : (isDouble ? 'double' : '');
+        return `<tr class="${cls}">
+          <td>${row.date || row[0] || ''}</td>
+          <td>${row.day || row[1] || ''}</td>
+          <td>${time}</td>
+          <td>${hrs}س</td>
+          <td>
+            ${isFriday ? '<span class="badge-friday">جمعة</span>' : ''}
+            ${isDouble ? '<span class="badge-meal">وجبة</span>' : ''}
+            ${extraMins > 0 ? `<span class="badge-extra">+${(extraMins/60).toFixed(1)}س</span>` : ''}
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+ 
+function renderEmpAttInputs(emp, d) {
+  if (emp.type === 'shift') {
+    return `<div class="shift-input-row">
+      <div><div class="field-label">شيفتات (من الشيت)</div><input type="number" value="${d.shifts || 0}" onchange="saveAttField(${emp.id},'shifts',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">ساعات إضافي</div><input type="number" step="0.5" value="${d.extraHours || 0}" onchange="saveAttField(${emp.id},'extraHours',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">جمع (من الشيت)</div><input type="number" value="${d.fridays || 0}" onchange="saveAttField(${emp.id},'fridays',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">وجبات</div><input type="number" value="${d.meals || 0}" onchange="saveAttField(${emp.id},'meals',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">سلفة</div><input type="number" value="${d.advance || 0}" onchange="saveAttField(${emp.id},'advance',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">مكافأة</div><input type="number" value="${d.bonus || 0}" onchange="saveAttField(${emp.id},'bonus',this.value)" style="text-align:center;"></div>
+    </div>`;
+  } else {
+    return `<div class="shift-input-row">
+      <div><div class="field-label">أيام العمل الفعلية</div><input type="number" value="${d.workDays || 0}" onchange="saveAttField(${emp.id},'workDays',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">أيام غياب</div><input type="number" value="${d.absentDays || 0}" onchange="saveAttField(${emp.id},'absentDays',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">جمع (الشيت)</div><input type="number" value="${d.fridays || 0}" onchange="saveAttField(${emp.id},'fridays',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">وجبات</div><input type="number" value="${d.meals || 0}" onchange="saveAttField(${emp.id},'meals',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">ساعات إضافي</div><input type="number" step="0.5" value="${d.extraHours || 0}" onchange="saveAttField(${emp.id},'extraHours',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">إجازات رسمية</div><input type="number" value="${d.officialDays || 0}" onchange="saveAttField(${emp.id},'officialDays',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">حوافز (يدوي)</div>
+        <select onchange="saveAttField(${emp.id},'incentive',this.value)">
+          <option value="0" ${!d.incentive ? 'selected':''}>—</option>
+          <option value="150" ${d.incentive==150?'selected':''}>150</option>
+          <option value="200" ${d.incentive==200?'selected':''}>200</option>
+          <option value="250" ${d.incentive==250?'selected':''}>250</option>
+          <option value="350" ${d.incentive==350?'selected':''}>350</option>
+          <option value="500" ${d.incentive==500?'selected':''}>500</option>
+          <option value="custom">مخصص</option>
+        </select>
+        ${d.incentiveCustom !== undefined ? `<input type="number" placeholder="قيمة" value="${d.incentiveCustom||''}" onchange="saveAttField(${emp.id},'incentiveCustom',this.value)" style="margin-top:4px">` : ''}
+      </div>
+      <div><div class="field-label">سلفة</div><input type="number" value="${d.advance || 0}" onchange="saveAttField(${emp.id},'advance',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">مكافأة</div><input type="number" value="${d.bonus || 0}" onchange="saveAttField(${emp.id},'bonus',this.value)" style="text-align:center;"></div>
+    </div>`;
+  }
+}
+ 
+function saveAttField(empId, field, value) {
+  const monthData = loadMonthData(currentAttYear, currentAttMonth);
+  if (!monthData[empId]) monthData[empId] = {};
+  if (field === 'incentive' && value === 'custom') {
+    monthData[empId].incentiveCustom = 0;
+    saveMonthData(currentAttYear, currentAttMonth, monthData);
+    renderAttendance(); return;
+  }
+  monthData[empId][field] = parseFloat(value) || 0;
+  saveMonthData(currentAttYear, currentAttMonth, monthData);
+  updateAttSummary();
+}
+ 
+function updateAttSummary() {
+  const emps = loadEmployees();
+  const monthData = loadMonthData(currentAttYear, currentAttMonth);
+  let te=0,tm=0,tf=0,ts=0;
+  emps.forEach(emp => {
+    const d = monthData[emp.id] || {};
+    te += d.extraHours || 0;
+    tm += d.meals || 0;
+    tf += d.fridays || 0;
+    ts += d.shifts || 0;
+  });
+  document.getElementById('s-extra').textContent = te.toFixed(1);
+  document.getElementById('s-meals').textContent = tm;
+  document.getElementById('s-fridays').textContent = tf;
+  document.getElementById('s-shifts').textContent = ts;
+}
+ 
+function toggleEmp(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+ 
+function transferToSalaries() {
+  showPage('salaries');
+  recalcAll();
+  showToast('✅ تم نقل بيانات الحضور للمرتبات');
+}
+ 
+// ============ SALARIES ============
+function renderSalaries() {
+  document.getElementById('sal-month-display').textContent = monthLabel(currentSalYear, currentSalMonth);
+  const monthData = loadMonthData(currentSalYear, currentSalMonth);
+  const salData = monthData.salarySettings || {};
+  document.getElementById('total-cases').value = salData.totalCases || '';
+  document.getElementById('month-days').value = salData.monthDays || 30;
+  recalcAll();
+}
+ 
+function recalcAll() {
+  const emps = loadEmployees();
+  const monthData = loadMonthData(currentSalYear, currentSalMonth);
+  const totalCases = parseFloat(document.getElementById('total-cases').value) || 0;
+  const monthDays = parseInt(document.getElementById('month-days').value) || 30;
+ 
+  // Save settings
+  if (!monthData.salarySettings) monthData.salarySettings = {};
+  monthData.salarySettings.totalCases = totalCases;
+  monthData.salarySettings.monthDays = monthDays;
+  saveMonthData(currentSalYear, currentSalMonth, monthData);
+ 
+  // Count eligible monthly employees (absent <= 2)
+  const eligibleMonthly = emps.filter(emp => {
+    if (emp.type !== 'monthly') return false;
+    const d = monthData[emp.id] || {};
+    return (d.absentDays || 0) <= 2;
+  });
+  const improvementVal = eligibleMonthly.length > 0 && totalCases > 0
+    ? Math.round(totalCases / eligibleMonthly.length)
+    : 0;
+ 
+  document.getElementById('total-cases-display').textContent = totalCases || '—';
+  document.getElementById('improvement-val').textContent = improvementVal || '—';
+  document.getElementById('month-days-display').textContent = monthDays;
+ 
+  const tbody = document.getElementById('salary-tbody');
+  let grandTotal = 0;
+ 
+  tbody.innerHTML = emps.map(emp => {
+    const d = monthData[emp.id] || {};
+    let base = 0, fridayPay = 0, extraPay = 0, mealPay = 0, incentive = 0, improvement = 0, deductAbsent = 0, advance = 0, bonus = 0, net = 0;
+ 
+    if (emp.type === 'doctor') {
+      return `<tr class="monthly-row">
+        <td style="text-align:right;font-weight:600">${emp.name}</td>
+        <td><span class="emp-type-badge monthly">دكتور</span></td>
+        <td colspan="10" style="color:var(--text-muted);font-size:12px">حضور مرن – يُحدد يدوياً</td>
+      </tr>`;
+    }
+ 
+    if (emp.type === 'shift') {
+      const shifts = d.shifts || 0;
+      base = shifts * (emp.shiftRate || 0);
+      const shiftHours = emp.specialHours || SHIFT_HOURS;
+      const hourRate = (emp.shiftRate || 0) / shiftHours;
+      extraPay = (d.extraHours || 0) * hourRate;
+      fridayPay = (d.fridays || 0) * (emp.fridayRate || 0);
+      mealPay = (d.meals || 0) * MEAL_PRICE;
+      advance = d.advance || 0;
+      bonus = d.bonus || 0;
+    } else {
+      base = emp.salary || 0;
+      const hourRate = base / monthDays / SHIFT_HOURS;
+      extraPay = (d.extraHours || 0) * hourRate;
+      fridayPay = (d.fridays || 0) * (emp.fridayRate || 0);
+      mealPay = (d.meals || 0) * MEAL_PRICE;
+      const isEligible = (d.absentDays || 0) <= 2;
+      incentive = isEligible ? (d.incentiveCustom !== undefined ? (d.incentiveCustom || 0) : (d.incentive || 0)) : 0;
+      improvement = isEligible ? improvementVal : 0;
+      deductAbsent = base / monthDays * (d.absentDays || 0);
+      advance = d.advance || 0;
+      bonus = d.bonus || 0;
+    }
+ 
+    // Add توصيل bonus for أم محمد
+    const deliveryBonus = emp.note && emp.note.includes('1500') ? 1500 : 0;
+ 
+    net = base + fridayPay + extraPay + mealPay + incentive + improvement + bonus + deliveryBonus - deductAbsent - advance;
+    grandTotal += net;
+ 
+    const cls = emp.type === 'shift' ? 'shift-row' : 'monthly-row';
+    return `<tr class="${cls}">
+      <td style="text-align:right;font-weight:600">${emp.name}</td>
+      <td><span class="emp-type-badge ${emp.type === 'shift' ? 'shift' : 'monthly'}">${emp.type === 'shift' ? 'شيفت' : 'شهري'}</span></td>
+      <td>${Math.round(base).toLocaleString()}</td>
+      <td class="bonus">${Math.round(fridayPay) || '—'}</td>
+      <td class="bonus">${Math.round(extraPay) || '—'}</td>
+      <td class="bonus">${Math.round(mealPay) || '—'}</td>
+      <td class="bonus">${Math.round(incentive) || '—'}</td>
+      <td class="bonus">${Math.round(improvement) || '—'}</td>
+      <td class="deduction">${Math.round(deductAbsent) || '—'}</td>
+      <td class="deduction">${Math.round(advance) || '—'}</td>
+      <td class="bonus">${Math.round(bonus + deliveryBonus) || '—'}</td>
+      <td class="net-salary">${Math.round(net).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+ 
+  grandTotal = Math.round(grandTotal);
+  document.getElementById('grand-total').textContent = grandTotal.toLocaleString();
+  document.getElementById('total-salary').textContent = grandTotal.toLocaleString();
+}
+ 
+function saveSalaryMonth() {
+  const monthData = loadMonthData(currentSalYear, currentSalMonth);
+  const emps = loadEmployees();
+  const monthDays = parseInt(document.getElementById('month-days').value) || 30;
+  const totalCases = parseFloat(document.getElementById('total-cases').value) || 0;
+  const grand = parseInt(document.getElementById('grand-total').textContent.replace(/,/g,'')) || 0;
+ 
+  // Save to record
+  const record = loadRecord();
+  const existing = record.findIndex(r => r.year === currentSalYear && r.month === currentSalMonth);
+  const entry = {
+    year: currentSalYear, month: currentSalMonth,
+    label: monthLabel(currentSalYear, currentSalMonth),
+    total: grand, totalCases, monthDays,
+    saved: new Date().toISOString(),
+    employees: emps.map(emp => {
+      const d = monthData[emp.id] || {};
+      return { name: emp.name, type: emp.type, data: d };
+    })
+  };
+  if (existing >= 0) record[existing] = entry;
+  else record.unshift(entry);
+  saveRecord(record);
+ 
+  // Update vacations for monthly employees
+  const vac = loadVacations();
+  emps.forEach(emp => {
+    if (emp.type !== 'monthly') return;
+    const d = monthData[emp.id] || {};
+    const vacDays = d.vacationDays || 0;
+    if (!vac[emp.id]) vac[emp.id] = { taken: 0 };
+    vac[emp.id].taken = (vac[emp.id].taken || 0) + vacDays;
+  });
+  saveVacations(vac);
+ 
+  showToast('✅ تم حفظ بيانات الشهر في السجل');
+}
+ 
+// ============ RECORD ============
+function renderRecord() {
+  const record = loadRecord();
+  const el = document.getElementById('record-list');
+  if (!record.length) { el.innerHTML = '<div class="card" style="text-align:center;color:var(--text-muted)">لا توجد شهور محفوظة بعد</div>'; return; }
+  el.innerHTML = record.map((r, i) => `
+    <div class="record-month">
+      <div class="record-month-header" onclick="toggleEmp('rec-body-${i}')">
+        <div><div style="font-size:15px;font-weight:700">${r.label}</div><div style="font-size:12px;opacity:0.8">محفوظ: ${new Date(r.saved).toLocaleDateString('ar-EG')}</div></div>
+        <div style="font-size:18px;font-weight:700">${(r.total||0).toLocaleString()} جنيه</div>
+      </div>
+      <div class="record-month-body" id="rec-body-${i}">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">حالات المعمل: ${r.totalCases || '—'} | أيام الشهر: ${r.monthDays || 30}</div>
+        <table class="log-table"><thead><tr><th>الموظف</th><th>النوع</th><th>التفاصيل</th></tr></thead>
+        <tbody>${(r.employees||[]).map(e => `<tr>
+          <td>${e.name}</td><td>${e.type === 'shift' ? 'شيفت' : 'شهري'}</td>
+          <td style="font-size:11px;color:var(--text-muted)">
+            ${e.type === 'shift' ? `${e.data.shifts||0} شيفتة` : `غياب: ${e.data.absentDays||0}`}
+            ${e.data.extraHours ? ` | إضافي: ${e.data.extraHours}س` : ''}
+            ${e.data.meals ? ` | وجبات: ${e.data.meals}` : ''}
+          </td>
+        </tr>`).join('')}</tbody></table>
+      </div>
+    </div>`).join('');
+}
+ 
+// ============ VACATIONS ============
+function renderVacations() {
+  const emps = loadEmployees().filter(e => e.type === 'monthly');
+  const vac = loadVacations();
+  const el = document.getElementById('vac-list');
+  el.innerHTML = emps.map(emp => {
+    const taken = (vac[emp.id] || {}).taken || 0;
+    const remaining = MAX_VACATION - taken;
+    const pct = Math.min(100, (taken / MAX_VACATION) * 100);
+    const color = remaining <= 5 ? '#c0392b' : remaining <= 10 ? '#d97706' : '#16a34a';
+    return `<div class="vac-card">
+      <div style="min-width:100px;font-weight:600;font-size:14px">${emp.name}</div>
+      <div class="vac-bar-wrap">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">أخذ ${taken} من ${MAX_VACATION} يوم</div>
+        <div class="vac-bar"><div class="vac-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      </div>
+      <div class="vac-remaining" style="color:${color}">${remaining}</div>
+      <button class="btn btn-outline btn-sm" onclick="addVacation(${emp.id}, '${emp.name}')">+</button>
+    </div>`;
+  }).join('');
+}
+ 
+function addVacation(empId, name) {
+  const days = prompt(`إضافة إجازة لـ ${name} – كم يوم؟`);
+  if (!days || isNaN(days)) return;
+  const vac = loadVacations();
+  if (!vac[empId]) vac[empId] = { taken: 0 };
+  vac[empId].taken = (vac[empId].taken || 0) + parseInt(days);
+  saveVacations(vac);
+  renderVacations();
+  showToast(`✅ تمت إضافة ${days} يوم إجازة لـ ${name}`);
+}
+ 
+// ============ SETTINGS ============
+function renderSettings() {
+  document.getElementById('sheet-url-input').value = getSheetUrl();
+  const emps = loadEmployees();
+  const list = document.getElementById('settings-emp-list');
+  list.innerHTML = emps.map(emp => `
+    <div class="emp-setting-card">
+      <div class="emp-setting-header">
+        <div>
+          <div style="font-weight:700;font-size:15px">${emp.name}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${emp.type === 'shift' ? 'شيفتات' : emp.type === 'doctor' ? 'دكتور' : 'شهري'}
+          ${emp.type === 'shift' ? ` · ${emp.shiftRate||0} جنيه/شيفتة` : emp.type === 'monthly' ? ` · ${emp.salary||0} جنيه/شهر` : ''}</div>
+          ${emp.note ? `<div style="font-size:11px;color:var(--warning)">${emp.note}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="openEditEmpModal(${emp.id})">تعديل</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${emp.id})">حذف</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+ 
+function saveSheetUrl() {
+  const url = document.getElementById('sheet-url-input').value.trim();
+  if (!url) return;
+  localStorage.setItem('nour_sheet_url', url);
+  showToast('✅ تم حفظ رابط الشيت');
+}
+ 
+let editingEmpId = null;
+function openAddEmpModal() {
+  editingEmpId = null;
+  document.getElementById('emp-modal-title').textContent = 'إضافة موظف جديد';
+  document.getElementById('emp-modal-body').innerHTML = renderEmpForm({});
+  document.getElementById('emp-modal').classList.add('open');
+}
+function openEditEmpModal(id) {
+  editingEmpId = id;
+  const emps = loadEmployees();
+  const emp = emps.find(e => e.id === id) || {};
+  document.getElementById('emp-modal-title').textContent = `تعديل: ${emp.name}`;
+  document.getElementById('emp-modal-body').innerHTML = renderEmpForm(emp);
+  document.getElementById('emp-modal').classList.add('open');
+}
+function renderEmpForm(emp) {
+  return `
+  <div class="field-row"><label>الاسم</label><input type="text" id="f-name" value="${emp.name||''}"></div>
+  <div class="field-row"><label>النوع</label>
+    <select id="f-type" onchange="toggleFormType()">
+      <option value="monthly" ${emp.type==='monthly'?'selected':''}>شهري</option>
+      <option value="shift" ${emp.type==='shift'?'selected':''}>شيفتات</option>
+      <option value="doctor" ${emp.type==='doctor'?'selected':''}>دكتور</option>
+    </select>
+  </div>
+  <div id="f-salary-row" class="field-row"><label>المرتب</label><input type="number" id="f-salary" value="${emp.salary||0}"></div>
+  <div id="f-shift-row" class="field-row" style="display:none"><label>سعر الشيفتة</label><input type="number" id="f-shift-rate" value="${emp.shiftRate||0}"></div>
+  <div id="f-special-row" class="field-row" style="display:none"><label>ساعات الشيفتة</label><input type="number" id="f-special-hours" value="${emp.specialHours||6}" placeholder="6"></div>
+  <div class="field-row"><label>سعر الجمعة</label><input type="number" id="f-friday" value="${emp.fridayRate||0}"></div>
+  <div class="field-row"><label>ملاحظة</label><input type="text" id="f-note" value="${emp.note||''}"></div>
+  `;
+}
+function toggleFormType() {
+  const t = document.getElementById('f-type').value;
+  document.getElementById('f-salary-row').style.display = t === 'monthly' || t === 'doctor' ? '' : 'none';
+  document.getElementById('f-shift-row').style.display = t === 'shift' ? '' : 'none';
+  document.getElementById('f-special-row').style.display = t === 'shift' ? '' : 'none';
+}
+function saveEmployee() {
+  const emps = loadEmployees();
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showToast('⚠️ أدخل الاسم'); return; }
+  const type = document.getElementById('f-type').value;
+  const data = {
+    name, type,
+    salary: parseFloat(document.getElementById('f-salary').value) || 0,
+    shiftRate: parseFloat(document.getElementById('f-shift-rate').value) || 0,
+    specialHours: parseFloat(document.getElementById('f-special-hours').value) || 6,
+    fridayRate: parseFloat(document.getElementById('f-friday').value) || 0,
+    note: document.getElementById('f-note').value.trim()
+  };
+  if (editingEmpId) {
+    const idx = emps.findIndex(e => e.id === editingEmpId);
+    if (idx >= 0) emps[idx] = { ...emps[idx], ...data };
+  } else {
+    data.id = Date.now();
+    emps.push(data);
+  }
+  saveEmployees(emps);
+  closeModal('emp-modal');
+  renderSettings();
+  showToast('✅ تم حفظ بيانات الموظف');
+}
+function deleteEmployee(id) {
+  if (!confirm('هل تريد حذف هذا الموظف؟')) return;
+  const emps = loadEmployees().filter(e => e.id !== id);
+  saveEmployees(emps);
+  renderSettings();
+  showToast('✅ تم حذف الموظف');
+}
+ 
+// ============ BACKUP ============
+function backupData() {
+  const data = {
+    version: 4,
+    date: new Date().toISOString(),
+    employees: loadEmployees(),
+    record: loadRecord(),
+    vacations: loadVacations(),
+    sheetUrl: getSheetUrl(),
+    months: {}
+  };
+  // Save last 12 months
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(); d.setMonth(d.getMonth() - i);
+    const key = `${d.getFullYear()}_${d.getMonth()}`;
+    data.months[key] = loadMonthData(d.getFullYear(), d.getMonth());
+  }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `معامل_النور_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('✅ تم تنزيل النسخة الاحتياطية');
+}
+function restoreData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    if (!confirm('هل تريد استعادة البيانات؟ سيتم استبدال البيانات الحالية.')) return;
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.employees) saveEmployees(data.employees);
+      if (data.record) saveRecord(data.record);
+      if (data.vacations) saveVacations(data.vacations);
+      if (data.sheetUrl) localStorage.setItem('nour_sheet_url', data.sheetUrl);
+      if (data.months) {
+        Object.entries(data.months).forEach(([key, val]) => {
+          const [y, m] = key.split('_').map(Number);
+          saveMonthData(y, m, val);
+        });
+      }
+      showToast('✅ تم استعادة البيانات بنجاح');
+      showPage('attendance');
+    } catch { showToast('❌ ملف غير صالح'); }
+  };
+  reader.readAsText(file);
+}
+ 
+// ============ CSV EXPORT ============
+function exportCSV() {
+  const emps = loadEmployees();
+  const monthData = loadMonthData(currentSalYear, currentSalMonth);
+  const monthDays = parseInt(document.getElementById('month-days').value) || 30;
+  const label = monthLabel(currentSalYear, currentSalMonth);
+  let csv = '\uFEFF'; // BOM
+  csv += `مرتبات ${label}\n`;
+  csv += 'الموظف,النوع,الأساسي,الجمعة,الإضافي,الوجبات,الحوافز,التحسين,خصم الغياب,السلفة,المكافأة,الصافي\n';
+  const totalCases = parseFloat(document.getElementById('total-cases').value) || 0;
+  const eligible = emps.filter(e => e.type === 'monthly' && ((monthData[e.id] || {}).absentDays || 0) <= 2);
+  const impVal = eligible.length > 0 && totalCases > 0 ? Math.round(totalCases / eligible.length) : 0;
+  let grand = 0;
+  emps.forEach(emp => {
+    if (emp.type === 'doctor') return;
+    const d = monthData[emp.id] || {};
+    let base,fridayPay,extraPay,mealPay,incentive,improvement,deductAbsent,advance,bonus;
+    if (emp.type === 'shift') {
+      base = (d.shifts||0) * (emp.shiftRate||0);
+      extraPay = (d.extraHours||0) * ((emp.shiftRate||0)/(emp.specialHours||6));
+      fridayPay = (d.fridays||0)*(emp.fridayRate||0);
+      mealPay = (d.meals||0)*MEAL_PRICE;
+      incentive=0;improvement=0;deductAbsent=0;
+    } else {
+      base = emp.salary||0;
+      extraPay=(d.extraHours||0)*(base/monthDays/6);
+      fridayPay=(d.fridays||0)*(emp.fridayRate||0);
+      mealPay=(d.meals||0)*MEAL_PRICE;
+      const elig=(d.absentDays||0)<=2;
+      incentive=elig?(d.incentiveCustom!==undefined?(d.incentiveCustom||0):(d.incentive||0)):0;
+      improvement=elig?impVal:0;
+      deductAbsent=base/monthDays*(d.absentDays||0);
+    }
+    advance=d.advance||0;bonus=d.bonus||0;
+    const delivery = emp.note&&emp.note.includes('1500')?1500:0;
+    const net=base+fridayPay+extraPay+mealPay+incentive+improvement+bonus+delivery-deductAbsent-advance;
+    grand+=net;
+    csv+=`${emp.name},${emp.type==='shift'?'شيفتات':'شهري'},${Math.round(base)},${Math.round(fridayPay)},${Math.round(extraPay)},${Math.round(mealPay)},${Math.round(incentive)},${Math.round(improvement)},${Math.round(deductAbsent)},${Math.round(advance)},${Math.round(bonus+delivery)},${Math.round(net)}\n`;
+  });
+  csv += `الإجمالي,,,,,,,,,,,${Math.round(grand)}\n`;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`مرتبات_${label.replace(' ','_')}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('✅ تم تنزيل ملف CSV');
+}
+ 
+// ============ UTILS ============
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+ 
+// Close modal on outside click
+document.getElementById('emp-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal('emp-modal');
+});
+ 
+// ============ INIT ============
+function init() {
+  // Load cached sheet data
+  const cached = localStorage.getItem('nour_sheet_cache');
+  if (cached) {
+    try { sheetData = JSON.parse(cached).data || []; } catch(e) {}
+  }
+  // Try auto-sync on load
+  renderAttendance();
+}
+ 
+init();
+</script>
+</body>
+</html>
