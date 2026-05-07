@@ -170,6 +170,7 @@ input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 
 .debug-panel { background: #1e2a3a; color: #a0e0a0; border-radius: 10px; padding: 12px; font-size: 11px; font-family: monospace; margin-bottom: 12px; max-height: 200px; overflow-y: auto; display: none; }
 .debug-panel.visible { display: block; }
 </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -205,10 +206,10 @@ input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 
   </div>
 
   <div class="card">
-    <div class="card-title">📊 الشيت المتزامن</div>
+    <div class="card-title">📊 حالة المزامنة</div>
     <div id="sheet-status" class="loading">اضغط "تحديث الشيت" لجلب البيانات</div>
     <div style="margin-top:8px">
-      <button class="btn btn-outline btn-sm" onclick="toggleDebug()">🔍 عرض سجل الأخطاء</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleDebug()">🔍 عرض سجل التشخيص</button>
     </div>
     <div class="debug-panel" id="debug-panel"></div>
   </div>
@@ -293,12 +294,12 @@ input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 
   <div class="card">
     <div class="card-title">🔗 رابط الشيت</div>
     <div class="field-row">
-      <input type="text" id="sheet-url-input" placeholder="https://script.google.com/ ..." style="flex:1">
+      <input type="text" id="sheet-url-input" placeholder="https://script.google.com/  ..." style="flex:1">
     </div>
     <button class="btn btn-primary btn-sm" onclick="saveSheetUrl()">حفظ الرابط</button>
     <div style="margin-top:12px;font-size:12px;color:var(--text-muted)">
-      <strong>تنسيق الشيت المطلوب:</strong> كل صف يحتوي على: التاريخ | اليوم | اسم الموظف | النوع | الدور | وقت الحضور | وقت الانصراف<br>
-      أو العمود السادس يحتوي "HH:MM - HH:MM" (حضور - انصراف)
+      <strong>تنسيق الشيت المطلوب:</strong> كل موظف له صفين: حضور ثم انصراف.<br>
+      الأعمدة: التاريخ | اليوم | اسم الموظف | النوع (حضور/انصراف) | الوظيفة | الوقت | المسافة | الحالة | ساعات العمل
     </div>
   </div>
 
@@ -335,7 +336,7 @@ input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 
 
 <script>
 // ============ CONSTANTS ============
-const SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycby0McT1aEQbqpjr2ZDU848wzU08-idf4lvvVQFF0bQ/dev';
+const SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzTazoH1EyyUkY2Qh-VZ848wzU08-idf4lvvVQFF0bQ/dev';
 const MEAL_PRICE = 50;
 const SHIFT_HOURS = 6;
 const MAX_VACATION = 21;
@@ -350,9 +351,10 @@ let sheetData = [];
 let debugLog = [];
 
 function addDebug(msg) {
-  debugLog.push(`[${new Date().toLocaleTimeString('ar')}] ${msg}`);
+  const time = new Date().toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  debugLog.push(`[${time}] ${msg}`);
   const el = document.getElementById('debug-panel');
-  if (el) el.innerHTML = debugLog.slice(-30).join('<br>');
+  if (el) el.innerHTML = debugLog.slice(-50).join('<br>');
 }
 
 function toggleDebug() {
@@ -385,36 +387,43 @@ const defaultEmployees = [
 
 // ============ STORAGE ============
 function loadEmployees() {
-  const s = localStorage.getItem('nour_employees');
-  return s ? JSON.parse(s) : defaultEmployees;
+  const s = localStorage.getItem('nour_employees_v2');
+  if (s) return JSON.parse(s);
+  // Migrate from old key
+  const old = localStorage.getItem('nour_employees');
+  if (old) {
+    localStorage.setItem('nour_employees_v2', old);
+    return JSON.parse(old);
+  }
+  return JSON.parse(JSON.stringify(defaultEmployees));
 }
-function saveEmployees(e) { localStorage.setItem('nour_employees', JSON.stringify(e)); }
+function saveEmployees(e) { localStorage.setItem('nour_employees_v2', JSON.stringify(e)); }
 function loadMonthData(y, m) {
-  const s = localStorage.getItem(`nour_month_${y}_${m}`);
+  const s = localStorage.getItem(`nour_month_v2_${y}_${m}`);
   return s ? JSON.parse(s) : {};
 }
-function saveMonthData(y, m, d) { localStorage.setItem(`nour_month_${y}_${m}`, JSON.stringify(d)); }
-function loadRecord() { const s = localStorage.getItem('nour_record'); return s ? JSON.parse(s) : []; }
-function saveRecord(r) { localStorage.setItem('nour_record', JSON.stringify(r)); }
-function loadVacations() { const s = localStorage.getItem('nour_vacations'); return s ? JSON.parse(s) : {}; }
-function saveVacations(v) { localStorage.setItem('nour_vacations', JSON.stringify(v)); }
+function saveMonthData(y, m, d) { localStorage.setItem(`nour_month_v2_${y}_${m}`, JSON.stringify(d)); }
+function loadRecord() { const s = localStorage.getItem('nour_record_v2'); return s ? JSON.parse(s) : []; }
+function saveRecord(r) { localStorage.setItem('nour_record_v2', JSON.stringify(r)); }
+function loadVacations() { const s = localStorage.getItem('nour_vacations_v2'); return s ? JSON.parse(s) : {}; }
+function saveVacations(v) { localStorage.setItem('nour_vacations_v2', JSON.stringify(v)); }
 function getSheetUrl() { return localStorage.getItem('nour_sheet_url') || SHEET_URL_DEFAULT; }
 
 // ============ DAILY LOG HELPERS ============
 function loadDailyLog(empId, year, month) {
-  const key = `nour_daily_${empId}_${year}_${month}`;
+  const key = `nour_daily_v2_${empId}_${year}_${month}`;
   const s = localStorage.getItem(key);
   return s ? JSON.parse(s) : [];
 }
 function saveDailyLog(empId, year, month, log) {
-  localStorage.setItem(`nour_daily_${empId}_${year}_${month}`, JSON.stringify(log));
+  localStorage.setItem(`nour_daily_v2_${empId}_${year}_${month}`, JSON.stringify(log));
 }
 
 /** Parse "HH:MM" or "H:MM AM/PM" → total minutes from midnight */
 function timeToMins(t) {
   if (!t) return null;
-  t = t.trim();
-  // Try H:MM AM/PM format
+  t = String(t).trim();
+  // Try H:MM AM/PM
   const ampm = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm|ص|م)$/);
   if (ampm) {
     let h = parseInt(ampm[1]), m = parseInt(ampm[2]);
@@ -423,11 +432,9 @@ function timeToMins(t) {
     if ((suf === 'am' || suf === 'ص') && h === 12) h = 0;
     return h * 60 + m;
   }
-  // Try H:MM format
+  // Try H:MM 24h
   const plain = t.match(/^(\d{1,2}):(\d{2})$/);
-  if (plain) {
-    return parseInt(plain[1]) * 60 + parseInt(plain[2]);
-  }
+  if (plain) return parseInt(plain[1]) * 60 + parseInt(plain[2]);
   return null;
 }
 
@@ -436,7 +443,7 @@ function calcDuration(inTime, outTime) {
   const a = timeToMins(inTime), b = timeToMins(outTime);
   if (a === null || b === null) return 0;
   if (b >= a) return b - a;
-  return 1440 - a + b; // crossed midnight
+  return 1440 - a + b;
 }
 
 /** Format minutes as "X س Y د" */
@@ -512,106 +519,57 @@ async function syncFromSheet() {
   addDebug('بدء المزامنة مع الشيت...');
 
   try {
-    const url = getSheetUrl();
+    const url = getSheetUrl().trim();
     addDebug('URL: ' + url.substring(0, 60) + '...');
 
-    const resp = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow'
-    });
+    // Add month parameter to get ALL records for this month
+    const monthParam = `${currentAttYear}-${String(currentAttMonth+1).padStart(2,'0')}`;
+    const fetchUrl = url.includes('?') ? `${url}&month=${monthParam}` : `${url}?month=${monthParam}`;
+
+    const resp = await fetch(fetchUrl, { method: 'GET', redirect: 'follow' });
     addDebug(`HTTP Status: ${resp.status}`);
 
     let text = '';
     try { text = await resp.text(); } catch(e2) { throw new Error('لم يمكن قراءة الاستجابة'); }
     addDebug(`Response length: ${text.length} chars`);
-    addDebug(`First 200 chars: ${text.substring(0,200)}`);
+    addDebug(`First 300 chars: ${text.substring(0,300)}`);
 
-    let rows = [];
+    let payload;
+    try { payload = JSON.parse(text); }
+    catch(e) { throw new Error('الاستجابة ليست JSON صالح: ' + text.substring(0,100)); }
 
-    // Try JSON parse first
-    try {
-      const json = JSON.parse(text);
-      addDebug('JSON parsed successfully. Type: ' + typeof json);
-
-      if (Array.isArray(json)) {
-        rows = json;
-        addDebug(`Array with ${rows.length} items`);
-      } else if (json.values) {
-        // Google Sheets API format [[col1,col2,...], ...]
-        rows = json.values.slice(1).map(r => ({ // skip header row
-          date: r[0] || '', day: r[1] || '', name: r[2] || '',
-          type: r[3] || '', role: r[4] || '',
-          inTime: r[5] || '', outTime: r[6] || '',
-          note: r[7] || ''
-        }));
-        addDebug(`Google Sheets format: ${rows.length} rows`);
-      } else if (json.data) {
-        rows = json.data;
-        addDebug(`Data format: ${rows.length} rows`);
-      } else if (typeof json === 'object') {
-        // Maybe it's a single object or something else
-        addDebug('Unknown JSON shape: ' + JSON.stringify(json).substring(0,100));
-      }
-    } catch(e) {
-      addDebug('Not JSON, trying TSV/CSV parse...');
-      // Try TSV (tab-separated)
-      const lines = text.split('\n').filter(l => l.trim());
-      addDebug(`Lines count: ${lines.length}`);
-      let startLine = 0;
-      // Detect and skip header line
-      if (lines.length > 0 && (lines[0].includes('اسم') || lines[0].includes('name') || lines[0].includes('Name') || lines[0].includes('تاريخ'))) {
-        startLine = 1;
-        addDebug('Skipping header line: ' + lines[0]);
-      }
-      rows = lines.slice(startLine).map((l, idx) => {
-        const sep = l.includes('\t') ? '\t' : ',';
-        const cells = l.split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
-        addDebug(`Row ${idx+startLine}: [${cells.slice(0,7).join(' | ')}]`);
-        return {
-          date: cells[0] || '',
-          day: cells[1] || '',
-          name: cells[2] || '',
-          type: cells[3] || '',
-          role: cells[4] || '',
-          inTime: cells[5] || '',
-          outTime: cells[6] || '',
-          note: cells[7] || ''
-        };
-      }).filter(r => r.name && r.date);
+    if (payload.status !== 'success') {
+      throw new Error(payload.message || 'خطأ من السيرفر');
     }
 
-    // Normalize rows - handle combined time field "HH:MM - HH:MM"
-    rows = rows.map(row => {
-      let inTime = row.inTime || row.in || '';
-      let outTime = row.outTime || row.out || '';
-      const timeField = row.time || '';
+    // New API returns merged records (checkin + checkout combined)
+    const rows = payload.records || [];
+    addDebug(`Records from API: ${rows.length}`);
 
-      // If in/out are empty but there's a combined time field
-      if ((!inTime || !outTime) && timeField) {
-        const sep = timeField.includes('–') ? '–' : '-';
-        const parts = timeField.split(sep).map(t => t.trim());
-        if (parts.length === 2) { inTime = parts[0]; outTime = parts[1]; }
-      }
-      // If outTime is in inTime field (single field with separator)
-      if (inTime && !outTime && (inTime.includes('–') || inTime.includes(' - '))) {
-        const sep = inTime.includes('–') ? '–' : ' - ';
-        const parts = inTime.split(sep).map(t => t.trim());
-        if (parts.length === 2) { inTime = parts[0]; outTime = parts[1]; }
-      }
+    if (!rows.length) {
+      throw new Error('الشيت لا يحتوي على سجلات لهذا الشهر');
+    }
 
-      return { ...row, inTime, outTime };
-    });
+    // Normalize to our format
+    sheetData = rows.map(r => ({
+      date: r.date || r['التاريخ'] || '',
+      day: r.day || r['اليوم'] || '',
+      name: r.name || r['اسم الموظف'] || '',
+      type: r.type || r['النوع'] || '',
+      role: r.role || r['الوظيفة'] || '',
+      inTime: r.inTime || r['وقت الحضور'] || '',
+      outTime: r.outTime || r['وقت الانصراف'] || '',
+      note: r.note || r['ملاحظة'] || ''
+    }));
 
-    addDebug(`Total valid rows after normalization: ${rows.length}`);
-
-    sheetData = rows;
-    localStorage.setItem('nour_sheet_cache', JSON.stringify({ ts: Date.now(), data: rows }));
+    addDebug(`Normalized rows: ${sheetData.length}`);
+    localStorage.setItem('nour_sheet_cache_v2', JSON.stringify({ ts: Date.now(), data: sheetData }));
     processSheetData();
-    showToast(`✅ تم تحديث ${rows.length} صف من الشيت`);
+    showToast(`✅ تم تحديث ${sheetData.length} سجل من الشيت`);
 
   } catch(e) {
     addDebug('ERROR: ' + e.message);
-    const cached = localStorage.getItem('nour_sheet_cache');
+    const cached = localStorage.getItem('nour_sheet_cache_v2');
     if (cached) {
       try {
         const c = JSON.parse(cached);
@@ -621,13 +579,12 @@ async function syncFromSheet() {
         status.innerHTML = `⚠️ تم استخدام نسخة محفوظة (منذ ${ago} دقيقة) - خطأ: ${e.message}`;
         addDebug(`Using cached data: ${sheetData.length} rows`);
       } catch(e2) {
-        status.innerHTML = `❌ خطأ: ${e.message} – تحقق من رابط الشيت في الإعدادات`;
+        status.innerHTML = `❌ خطأ: ${e.message}`;
       }
     } else {
       status.innerHTML = `
         <div style="color:var(--warning);font-size:13px;">
-          ⚠️ لم يتم الاتصال بالشيت.<br>
-          <strong>الخطأ:</strong> ${e.message}<br>
+          ⚠️ ${e.message}<br>
           تأكد أن رابط الشيت صحيح وأن Script مفتوح (Anyone with link can access).<br>
           يمكنك إدخال بيانات الحضور يدوياً.
         </div>`;
@@ -639,24 +596,19 @@ async function syncFromSheet() {
 
 function normalizeDate(dateStr) {
   if (!dateStr) return null;
-  dateStr = dateStr.trim();
-  // Try ISO format first YYYY-MM-DD
+  dateStr = String(dateStr).trim();
   if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) {
     const [y, m, d] = dateStr.split('-').map(Number);
     return { year: y, month: m - 1, day: d };
   }
-  // Try DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
   const parts = dateStr.split(/[\/\-\.]/).map(s => s.trim());
   if (parts.length === 3) {
     let day, month, year;
     if (parseInt(parts[0]) > 31) {
-      // YYYY/MM/DD
       year = parseInt(parts[0]); month = parseInt(parts[1]) - 1; day = parseInt(parts[2]);
     } else if (parseInt(parts[2]) > 31) {
-      // DD/MM/YYYY
       day = parseInt(parts[0]); month = parseInt(parts[1]) - 1; year = parseInt(parts[2]);
     } else {
-      // MM/DD/YY — less common but handle it
       month = parseInt(parts[0]) - 1; day = parseInt(parts[1]); year = 2000 + parseInt(parts[2]);
     }
     return { year, month, day };
@@ -667,16 +619,17 @@ function normalizeDate(dateStr) {
 function processSheetData() {
   const status = document.getElementById('sheet-status');
   const emps = loadEmployees();
-  const monthData = loadMonthData(currentAttYear, currentAttMonth) || {};
+  let monthData = loadMonthData(currentAttYear, currentAttMonth);
+  if (!monthData) monthData = {};
 
   addDebug(`Processing for ${MONTHS_AR[currentAttMonth]} ${currentAttYear}`);
   addDebug(`Total sheet rows: ${sheetData.length}`);
 
   // Filter rows for current month
   const filtered = sheetData.filter(row => {
-    const d = normalizeDate(row.date || row[0] || '');
+    const d = normalizeDate(row.date);
     if (!d) {
-      addDebug(`Cannot parse date: "${row.date || row[0] || ''}"`);
+      addDebug(`Cannot parse date: "${row.date}"`);
       return false;
     }
     return d.month === currentAttMonth && d.year === currentAttYear;
@@ -687,22 +640,22 @@ function processSheetData() {
   // Group by employee name
   const grouped = {};
   filtered.forEach(row => {
-    const name = (row.name || row[2] || '').trim();
-    if (!name) { addDebug(`Row with empty name skipped`); return; }
+    const name = String(row.name || '').trim();
+    if (!name) return;
     if (!grouped[name]) grouped[name] = [];
     grouped[name].push(row);
   });
 
-  addDebug(`Grouped employees: ${Object.keys(grouped).join(', ')}`);
+  const sheetNames = Object.keys(grouped);
+  addDebug(`Names in sheet: ${sheetNames.join(', ')}`);
 
-  // Match and process each employee
   let matched = 0;
   emps.forEach(emp => {
     if (emp.type === 'doctor') return;
-    // Try exact match, then partial match
+
+    // Match by name (exact or cleaned)
     let rows = grouped[emp.name] || [];
     if (!rows.length) {
-      // Try partial match (handle slight name differences)
       const empNameClean = emp.name.replace(/\s+/g, '').toLowerCase();
       for (const [k, v] of Object.entries(grouped)) {
         if (k.replace(/\s+/g, '').toLowerCase() === empNameClean) {
@@ -712,7 +665,12 @@ function processSheetData() {
         }
       }
     }
-    if (!rows.length) { addDebug(`No rows for: ${emp.name}`); return; }
+
+    if (!rows.length) {
+      addDebug(`No rows for: ${emp.name}`);
+      return;
+    }
+
     addDebug(`Processing ${emp.name}: ${rows.length} rows`);
     const stats = computeEmpStatsFromSheet(emp, rows);
     if (!monthData[emp.id]) monthData[emp.id] = {};
@@ -721,11 +679,10 @@ function processSheetData() {
   });
 
   saveMonthData(currentAttYear, currentAttMonth, monthData);
-  status.innerHTML = `✅ ${filtered.length} سجل محمّل – ${matched} موظف تم التعرف عليهم (من أصل ${Object.keys(grouped).length} اسم في الشيت)`;
+  status.innerHTML = `✅ ${filtered.length} سجل محمّل – ${matched} موظف تم التعرف عليهم (من أصل ${sheetNames.length} اسم في الشيت)`;
 
-  if (matched === 0 && Object.keys(grouped).length > 0) {
-    const sheetNames = Object.keys(grouped).join('، ');
-    status.innerHTML += `<br><span style="color:var(--warning);font-size:12px">⚠️ أسماء في الشيت: ${sheetNames}</span>`;
+  if (matched === 0 && sheetNames.length > 0) {
+    status.innerHTML += `<br><span style="color:var(--warning);font-size:12px">⚠️ أسماء في الشيت: ${sheetNames.join('، ')}</span>`;
     addDebug('Names in sheet do not match employee list!');
   }
 
@@ -739,35 +696,30 @@ function computeEmpStatsFromSheet(emp, rows) {
   const newLog = [];
 
   rows.forEach(row => {
-    const dayField = (row.day || row[1] || '').trim();
-    const dateRaw = (row.date || row[0] || '').trim();
-    let inTime = (row.inTime || row.in || '').trim();
-    let outTime = (row.outTime || row.out || '').trim();
+    const dayField = String(row.day || '').trim();
+    const dateRaw = String(row.date || '').trim();
+    let inTime = String(row.inTime || '').trim();
+    let outTime = String(row.outTime || '').trim();
 
-    // Compute duration
-    const inMins = timeToMins(inTime);
-    const outMins = timeToMins(outTime);
-    let durationMins = 0;
-
-    if (inMins !== null && outMins !== null) {
-      durationMins = outMins >= inMins ? (outMins - inMins) : (1440 - inMins + outMins);
-      addDebug(`  ${dateRaw}: ${inTime} → ${outTime} = ${durationMins} دقيقة`);
-    } else {
-      addDebug(`  ${dateRaw}: cannot parse times in="${inTime}" out="${outTime}"`);
+    if (!inTime || !outTime) {
+      addDebug(`  ${dateRaw}: missing in/out times`);
       return;
     }
 
-    if (durationMins <= 0) return;
+    const dur = calcDuration(inTime, outTime);
+    if (dur <= 0) {
+      addDebug(`  ${dateRaw}: zero or negative duration`);
+      return;
+    }
 
-    totalMins += durationMins;
-    const isFriday = dayField.includes('جمعة') || dayField.toLowerCase().includes('friday') || dayField.toLowerCase().includes('fri');
+    totalMins += dur;
+    const isFriday = dayField.includes('جمعة') || dayField.toLowerCase().includes('friday');
     if (isFriday) fridays++;
-    if (durationMins >= shiftMins * 2 - 30) meals++;
-    const dayShifts = Math.floor(durationMins / shiftMins);
+    if (dur >= shiftMins * 2 - 30) meals++;
+    const dayShifts = Math.floor(dur / shiftMins);
     shifts += dayShifts;
-    extraMins += durationMins % shiftMins;
+    extraMins += dur % shiftMins;
 
-    // Build normalized date
     const nd = normalizeDate(dateRaw);
     let dateVal = dateRaw;
     let dateLabel = dateRaw;
@@ -781,7 +733,7 @@ function computeEmpStatsFromSheet(emp, rows) {
       dayName: dayField || DAYS_AR[new Date(dateVal).getDay()] || '',
       inTime, outTime,
       isFriday,
-      note: (row.note || row[7] || '').trim(),
+      note: String(row.note || '').trim(),
       fromSheet: true
     });
   });
@@ -792,7 +744,7 @@ function computeEmpStatsFromSheet(emp, rows) {
   const merged = [
     ...existingLog.filter(e => !e.fromSheet),
     ...newLog.filter(e => !manualDates.has(e.dateVal))
-  ].sort((a, b) => a.dateVal.localeCompare(b.dateVal));
+  ].sort((a, b) => (a.dateVal || '').localeCompare(b.dateVal || ''));
   saveDailyLog(emp.id, currentAttYear, currentAttMonth, merged);
 
   return {
@@ -810,7 +762,7 @@ function renderAttendance() {
   document.getElementById('att-month-display').textContent = monthLabel(currentAttYear, currentAttMonth);
   document.getElementById('nav-month-label').textContent = monthLabel(currentAttYear, currentAttMonth);
   const emps = loadEmployees();
-  const monthData = loadMonthData(currentAttYear, currentAttMonth);
+  const monthData = loadMonthData(currentAttYear, currentAttMonth) || {};
   const list = document.getElementById('att-employees-list');
   let totalExtra = 0, totalMeals = 0, totalFridays = 0, totalShifts = 0;
 
@@ -915,28 +867,27 @@ function renderDailySection(emp, year, month) {
         <div class="daily-stat"><div class="ds-val">${totalMeals}</div><div class="ds-lbl">وجبة</div></div>
       </div>
       
-      <!-- Add entry form -->
       <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:10px;">
         <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">➕ إضافة يوم حضور يدوي</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;align-items:end;">
           <div>
-            <div class="fl" style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📅 التاريخ</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📅 التاريخ</div>
             <input type="date" id="dd-date-${emp.id}" value="${todayStr()}" onchange="autoSetDay(${emp.id})">
           </div>
           <div>
-            <div class="fl" style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📆 اليوم</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📆 اليوم</div>
             <input type="text" id="dd-day-${emp.id}" placeholder="تلقائي" readonly style="background:#f1f5f9">
           </div>
           <div>
-            <div class="fl" style="font-size:11px;color:var(--text-muted);margin-bottom:3px">🕐 وقت الحضور</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">🕐 وقت الحضور</div>
             <input type="time" id="dd-in-${emp.id}">
           </div>
           <div>
-            <div class="fl" style="font-size:11px;color:var(--text-muted);margin-bottom:3px">🕔 وقت الانصراف</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">🕔 وقت الانصراف</div>
             <input type="time" id="dd-out-${emp.id}">
           </div>
           <div>
-            <div class="fl" style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📝 ملاحظة</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📝 ملاحظة</div>
             <input type="text" id="dd-note-${emp.id}" placeholder="اختياري">
           </div>
           <div>
@@ -983,7 +934,6 @@ function addDailyEntry(empId) {
   log.push({ dateVal, dateLabel, dayName, inTime, outTime, isFriday, note: noteVal });
   log.sort((a, b) => a.dateVal.localeCompare(b.dateVal));
   saveDailyLog(empId, currentAttYear, currentAttMonth, log);
-  // Sync computed stats into monthData
   const emps = loadEmployees();
   const emp = emps.find(e => e.id === empId);
   if (emp) {
@@ -1125,7 +1075,7 @@ function recalcAll() {
     if (emp.type !== 'monthly') return false;
     const d = monthData[emp.id] || {};
     const absentRaw = d.absentDays || 0;
-    return absentRaw <= 2; // أكتر من يومين = لا يستحق
+    return absentRaw <= 2;
   });
   const improvementVal = eligibleMonthly.length > 0 && totalCases > 0
     ? Math.round(totalCases / eligibleMonthly.length) : 0;
@@ -1149,11 +1099,11 @@ function recalcAll() {
     }
 
     const totalHours = d.totalHours || 0;
+    const absentRaw = d.absentDays || 0;
 
     if (emp.type === 'shift') {
       const shifts = d.shifts || 0;
       base = shifts * (emp.shiftRate || 0);
-      // ساعة إضافية = سعر الشيفتة ÷ ساعات الشيفتة
       const hourRate = (emp.shiftRate || 0) / (emp.specialHours || SHIFT_HOURS);
       extraPay = (d.extraHours || 0) * hourRate;
       fridayPay = (d.fridays || 0) * (emp.fridayRate || 0);
@@ -1171,7 +1121,6 @@ function recalcAll() {
       mealPay   = (d.meals  || 0) * MEAL_PRICE;
 
       // ── خصم الغياب مع حساب الإجازة ──
-      const absentRaw  = d.absentDays || 0;
       const vacTaken   = (vac[emp.id] || {}).taken || 0;
       const vacBalance = Math.max(0, MAX_VACATION - vacTaken);
       const vacUsed    = Math.min(absentRaw, vacBalance); // أيام تغطيها الإجازة
@@ -1199,7 +1148,6 @@ function recalcAll() {
     const cls = emp.type === 'shift' ? 'shift-row' : 'monthly-row';
 
     // عرض سبب عدم الاستحقاق
-    const absentRaw = d.absentDays || 0;
     const notEligibleNote = (emp.type === 'monthly' && absentRaw > 2)
       ? `<div style="font-size:9px;color:var(--danger)">غاب ${absentRaw} أيام – لا حوافز/تحسين</div>` : '';
 
@@ -1430,11 +1378,11 @@ function deleteEmployee(id) {
 // ============ BACKUP ============
 function backupData() {
   const data = {
-    version: 6, date: new Date().toISOString(),
+    version: 7, date: new Date().toISOString(),
     employees: loadEmployees(), record: loadRecord(),
     vacations: loadVacations(), sheetUrl: getSheetUrl(), months: {}
   };
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 24; i++) {
     const d = new Date(); d.setMonth(d.getMonth() - i);
     const key = `${d.getFullYear()}_${d.getMonth()}`;
     data.months[key] = loadMonthData(d.getFullYear(), d.getMonth());
@@ -1542,7 +1490,7 @@ document.getElementById('emp-modal').addEventListener('click', function(e) {
 
 // ============ INIT ============
 function init() {
-  const cached = localStorage.getItem('nour_sheet_cache');
+  const cached = localStorage.getItem('nour_sheet_cache_v2');
   if (cached) {
     try { sheetData = JSON.parse(cached).data || []; } catch(e) {}
   }
