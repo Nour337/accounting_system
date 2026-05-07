@@ -71,8 +71,6 @@ h1,h2,h3,h4 { font-weight: 700; }
 .daily-section-header { background: #f8fafc; padding: 10px 14px; font-size: 13px; font-weight: 700; color: var(--primary); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
 .daily-section-body { padding: 12px; display: none; }
 .daily-section-body.open { display: block; }
-.daily-add-row { display: grid; grid-template-columns: 110px 1fr 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 10px; }
-.daily-add-row .fl { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; }
 .daily-log-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
 .daily-log-table th { background: var(--primary); color: #fff; padding: 7px 6px; text-align: center; font-size: 11px; }
 .daily-log-table td { padding: 6px 5px; text-align: center; border-bottom: 1px solid #f1f5f9; }
@@ -114,7 +112,7 @@ input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 
 .transfer-bar .title { font-size: 16px; font-weight: 700; }
 
 .salary-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.salary-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px; }
+.salary-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
 .salary-table th { background: var(--primary); color: #fff; padding: 10px 8px; text-align: center; font-size: 12px; font-weight: 600; }
 .salary-table td { padding: 9px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; }
 .salary-table tr:hover td { background: #f8fafc; }
@@ -167,8 +165,11 @@ input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 
 .daily-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 55px; }
 .daily-stat .ds-val { font-size: 16px; font-weight: 700; color: var(--primary); }
 .daily-stat .ds-lbl { font-size: 10px; color: var(--text-muted); }
+
+/* Debug panel */
+.debug-panel { background: #1e2a3a; color: #a0e0a0; border-radius: 10px; padding: 12px; font-size: 11px; font-family: monospace; margin-bottom: 12px; max-height: 200px; overflow-y: auto; display: none; }
+.debug-panel.visible { display: block; }
 </style>
-<base target="_blank">
 </head>
 <body>
 
@@ -206,6 +207,10 @@ input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 
   <div class="card">
     <div class="card-title">📊 الشيت المتزامن</div>
     <div id="sheet-status" class="loading">اضغط "تحديث الشيت" لجلب البيانات</div>
+    <div style="margin-top:8px">
+      <button class="btn btn-outline btn-sm" onclick="toggleDebug()">🔍 عرض سجل الأخطاء</button>
+    </div>
+    <div class="debug-panel" id="debug-panel"></div>
   </div>
 
   <div id="att-employees-list"></div>
@@ -255,11 +260,12 @@ input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 
         <tr>
           <th>الموظف</th><th>النوع</th><th>الأساسي</th><th>الجمع</th>
           <th>الإضافي</th><th>وجبات</th><th>حوافز</th><th>تحسين</th>
-          <th>خصم غياب</th><th>سلفة</th><th>مكافأة</th><th>الصافي</th>
+          <th>خصم غياب</th><th>سلفة</th><th>مكافأة</th>
+          <th>إجمالي ساعات</th><th>الصافي</th>
         </tr>
       </thead>
       <tbody id="salary-tbody"></tbody>
-      <tfoot><tr class="total-row"><td colspan="11">إجمالي الشهر</td><td id="grand-total">0</td></tr></tfoot>
+      <tfoot><tr class="total-row"><td colspan="12">إجمالي الشهر</td><td id="grand-total">0</td></tr></tfoot>
     </table>
   </div>
 
@@ -290,6 +296,10 @@ input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 
       <input type="text" id="sheet-url-input" placeholder="https://script.google.com/ ..." style="flex:1">
     </div>
     <button class="btn btn-primary btn-sm" onclick="saveSheetUrl()">حفظ الرابط</button>
+    <div style="margin-top:12px;font-size:12px;color:var(--text-muted)">
+      <strong>تنسيق الشيت المطلوب:</strong> كل صف يحتوي على: التاريخ | اليوم | اسم الموظف | النوع | الدور | وقت الحضور | وقت الانصراف<br>
+      أو العمود السادس يحتوي "HH:MM - HH:MM" (حضور - انصراف)
+    </div>
   </div>
 
   <div class="card">
@@ -327,7 +337,7 @@ input:focus, select:focus { border-color: var(--primary-light); box-shadow: 0 0 
 // ============ CONSTANTS ============
 const SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycby0McT1aEQbqpjr2ZDU848wzU08-idf4lvvVQFF0bQ/dev';
 const MEAL_PRICE = 50;
-const SHIFT_HOURS = 6;        // ثابت: عدد ساعات يوم العمل الاساسية = 6
+const SHIFT_HOURS = 6;
 const MAX_VACATION = 21;
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 const DAYS_AR = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -337,6 +347,18 @@ let currentAttYear = new Date().getFullYear();
 let currentSalMonth = new Date().getMonth();
 let currentSalYear = new Date().getFullYear();
 let sheetData = [];
+let debugLog = [];
+
+function addDebug(msg) {
+  debugLog.push(`[${new Date().toLocaleTimeString('ar')}] ${msg}`);
+  const el = document.getElementById('debug-panel');
+  if (el) el.innerHTML = debugLog.slice(-30).join('<br>');
+}
+
+function toggleDebug() {
+  const el = document.getElementById('debug-panel');
+  if (el) el.classList.toggle('visible');
+}
 
 // ============ DEFAULT EMPLOYEES ============
 const defaultEmployees = [
@@ -388,40 +410,57 @@ function saveDailyLog(empId, year, month, log) {
   localStorage.setItem(`nour_daily_${empId}_${year}_${month}`, JSON.stringify(log));
 }
 
-/** Parse "HH:MM" → total minutes from midnight */
+/** Parse "HH:MM" or "H:MM AM/PM" → total minutes from midnight */
 function timeToMins(t) {
   if (!t) return null;
-  const [h, m] = t.split(':').map(Number);
-  if (isNaN(h) || isNaN(m)) return null;
-  return h * 60 + m;
+  t = t.trim();
+  // Try H:MM AM/PM format
+  const ampm = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm|ص|م)$/);
+  if (ampm) {
+    let h = parseInt(ampm[1]), m = parseInt(ampm[2]);
+    const suf = ampm[3].toLowerCase();
+    if ((suf === 'pm' || suf === 'م') && h !== 12) h += 12;
+    if ((suf === 'am' || suf === 'ص') && h === 12) h = 0;
+    return h * 60 + m;
+  }
+  // Try H:MM format
+  const plain = t.match(/^(\d{1,2}):(\d{2})$/);
+  if (plain) {
+    return parseInt(plain[1]) * 60 + parseInt(plain[2]);
+  }
+  return null;
 }
+
 /** Minutes duration, handles midnight crossing */
 function calcDuration(inTime, outTime) {
   const a = timeToMins(inTime), b = timeToMins(outTime);
   if (a === null || b === null) return 0;
-  return b >= a ? (b - a) : (1440 - a + b);
+  if (b >= a) return b - a;
+  return 1440 - a + b; // crossed midnight
 }
+
 /** Format minutes as "X س Y د" */
 function fmtMins(mins) {
+  if (!mins || mins <= 0) return '0س';
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m > 0 ? `${h}س ${m}د` : `${h}س`;
 }
 
-/** Recompute attendance summary from daily log for an employee */
+/** Recompute attendance summary from daily log */
 function recomputeFromLog(empId, year, month, empShiftHours) {
   const log = loadDailyLog(empId, year, month);
-  const sh = (empShiftHours || SHIFT_HOURS) * 60; // shift in minutes
+  const shMins = (empShiftHours || SHIFT_HOURS) * 60;
   let totalMins = 0, shifts = 0, extraMins = 0, fridays = 0, meals = 0;
   log.forEach(entry => {
     const dur = calcDuration(entry.inTime, entry.outTime);
     totalMins += dur;
-    const dayShifts = Math.floor(dur / sh);
+    const dayShifts = Math.floor(dur / shMins);
     shifts += dayShifts;
-    const extra = dur - dayShifts * sh;
+    const extra = dur % shMins;
     extraMins += extra;
     if (entry.isFriday) fridays++;
-    if (dur >= sh * 2 - 30) meals++; // double shift
+    if (dur >= shMins * 2 - 30) meals++;
   });
   return {
     shifts,
@@ -469,34 +508,109 @@ async function syncFromSheet() {
   btn.classList.add('syncing');
   btn.innerHTML = '⏳ جاري التحديث...';
   status.innerHTML = '<span class="spinner"></span> جاري جلب بيانات الشيت...';
+  debugLog = [];
+  addDebug('بدء المزامنة مع الشيت...');
+
   try {
     const url = getSheetUrl();
+    addDebug('URL: ' + url.substring(0, 60) + '...');
+
     const resp = await fetch(url, {
       method: 'GET',
-      redirect: 'follow',
-      headers: { 'Accept': 'application/json, text/plain, */*' }
+      redirect: 'follow'
     });
-    if (!resp.ok && resp.status !== 0) throw new Error(`HTTP ${resp.status}`);
+    addDebug(`HTTP Status: ${resp.status}`);
+
     let text = '';
-    try { text = await resp.text(); } catch(e2) { throw new Error('empty'); }
+    try { text = await resp.text(); } catch(e2) { throw new Error('لم يمكن قراءة الاستجابة'); }
+    addDebug(`Response length: ${text.length} chars`);
+    addDebug(`First 200 chars: ${text.substring(0,200)}`);
+
     let rows = [];
+
+    // Try JSON parse first
     try {
       const json = JSON.parse(text);
-      if (Array.isArray(json)) rows = json;
-      else if (json.values) rows = json.values;
-      else if (json.data) rows = json.data;
+      addDebug('JSON parsed successfully. Type: ' + typeof json);
+
+      if (Array.isArray(json)) {
+        rows = json;
+        addDebug(`Array with ${rows.length} items`);
+      } else if (json.values) {
+        // Google Sheets API format [[col1,col2,...], ...]
+        rows = json.values.slice(1).map(r => ({ // skip header row
+          date: r[0] || '', day: r[1] || '', name: r[2] || '',
+          type: r[3] || '', role: r[4] || '',
+          inTime: r[5] || '', outTime: r[6] || '',
+          note: r[7] || ''
+        }));
+        addDebug(`Google Sheets format: ${rows.length} rows`);
+      } else if (json.data) {
+        rows = json.data;
+        addDebug(`Data format: ${rows.length} rows`);
+      } else if (typeof json === 'object') {
+        // Maybe it's a single object or something else
+        addDebug('Unknown JSON shape: ' + JSON.stringify(json).substring(0,100));
+      }
     } catch(e) {
-      rows = text.split('\n').filter(l => l.trim()).map(l => {
-        const cells = l.split('\t').map(c => c.trim());
-        if (cells.length < 2) return null;
-        return { date: cells[0], day: cells[1], name: cells[2], type: cells[3], role: cells[4], time: cells[5] };
-      }).filter(Boolean);
+      addDebug('Not JSON, trying TSV/CSV parse...');
+      // Try TSV (tab-separated)
+      const lines = text.split('\n').filter(l => l.trim());
+      addDebug(`Lines count: ${lines.length}`);
+      let startLine = 0;
+      // Detect and skip header line
+      if (lines.length > 0 && (lines[0].includes('اسم') || lines[0].includes('name') || lines[0].includes('Name') || lines[0].includes('تاريخ'))) {
+        startLine = 1;
+        addDebug('Skipping header line: ' + lines[0]);
+      }
+      rows = lines.slice(startLine).map((l, idx) => {
+        const sep = l.includes('\t') ? '\t' : ',';
+        const cells = l.split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
+        addDebug(`Row ${idx+startLine}: [${cells.slice(0,7).join(' | ')}]`);
+        return {
+          date: cells[0] || '',
+          day: cells[1] || '',
+          name: cells[2] || '',
+          type: cells[3] || '',
+          role: cells[4] || '',
+          inTime: cells[5] || '',
+          outTime: cells[6] || '',
+          note: cells[7] || ''
+        };
+      }).filter(r => r.name && r.date);
     }
+
+    // Normalize rows - handle combined time field "HH:MM - HH:MM"
+    rows = rows.map(row => {
+      let inTime = row.inTime || row.in || '';
+      let outTime = row.outTime || row.out || '';
+      const timeField = row.time || '';
+
+      // If in/out are empty but there's a combined time field
+      if ((!inTime || !outTime) && timeField) {
+        const sep = timeField.includes('–') ? '–' : '-';
+        const parts = timeField.split(sep).map(t => t.trim());
+        if (parts.length === 2) { inTime = parts[0]; outTime = parts[1]; }
+      }
+      // If outTime is in inTime field (single field with separator)
+      if (inTime && !outTime && (inTime.includes('–') || inTime.includes(' - '))) {
+        const sep = inTime.includes('–') ? '–' : ' - ';
+        const parts = inTime.split(sep).map(t => t.trim());
+        if (parts.length === 2) { inTime = parts[0]; outTime = parts[1]; }
+      }
+
+      return { ...row, inTime, outTime };
+    });
+
+    addDebug(`Total valid rows after normalization: ${rows.length}`);
+
     sheetData = rows;
     localStorage.setItem('nour_sheet_cache', JSON.stringify({ ts: Date.now(), data: rows }));
     processSheetData();
     showToast(`✅ تم تحديث ${rows.length} صف من الشيت`);
+
   } catch(e) {
+    addDebug('ERROR: ' + e.message);
     const cached = localStorage.getItem('nour_sheet_cache');
     if (cached) {
       try {
@@ -504,16 +618,18 @@ async function syncFromSheet() {
         sheetData = c.data || [];
         processSheetData();
         const ago = Math.round((Date.now() - c.ts) / 60000);
-        status.innerHTML = `⚠️ تم استخدام نسخة محفوظة (منذ ${ago} دقيقة)`;
+        status.innerHTML = `⚠️ تم استخدام نسخة محفوظة (منذ ${ago} دقيقة) - خطأ: ${e.message}`;
+        addDebug(`Using cached data: ${sheetData.length} rows`);
       } catch(e2) {
-        status.innerHTML = '❌ تعذر الاتصال – تحقق من رابط الشيت في الإعدادات';
+        status.innerHTML = `❌ خطأ: ${e.message} – تحقق من رابط الشيت في الإعدادات`;
       }
     } else {
       status.innerHTML = `
         <div style="color:var(--warning);font-size:13px;">
-          ⚠️ لم يتم الاتصال بالشيت بعد.<br>
-          <strong>للإصلاح:</strong> تأكد أن رابط الشيت في الإعدادات صحيح، وأن Script مفتوح للعامة (Anyone).<br>
-          يمكنك إدخال بيانات الحضور يدوياً في الخانات أدناه بدون شيت.
+          ⚠️ لم يتم الاتصال بالشيت.<br>
+          <strong>الخطأ:</strong> ${e.message}<br>
+          تأكد أن رابط الشيت صحيح وأن Script مفتوح (Anyone with link can access).<br>
+          يمكنك إدخال بيانات الحضور يدوياً.
         </div>`;
     }
   }
@@ -521,113 +637,172 @@ async function syncFromSheet() {
   btn.innerHTML = '🔄 تحديث الشيت';
 }
 
+function normalizeDate(dateStr) {
+  if (!dateStr) return null;
+  dateStr = dateStr.trim();
+  // Try ISO format first YYYY-MM-DD
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return { year: y, month: m - 1, day: d };
+  }
+  // Try DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+  const parts = dateStr.split(/[\/\-\.]/).map(s => s.trim());
+  if (parts.length === 3) {
+    let day, month, year;
+    if (parseInt(parts[0]) > 31) {
+      // YYYY/MM/DD
+      year = parseInt(parts[0]); month = parseInt(parts[1]) - 1; day = parseInt(parts[2]);
+    } else if (parseInt(parts[2]) > 31) {
+      // DD/MM/YYYY
+      day = parseInt(parts[0]); month = parseInt(parts[1]) - 1; year = parseInt(parts[2]);
+    } else {
+      // MM/DD/YY — less common but handle it
+      month = parseInt(parts[0]) - 1; day = parseInt(parts[1]); year = 2000 + parseInt(parts[2]);
+    }
+    return { year, month, day };
+  }
+  return null;
+}
+
 function processSheetData() {
   const status = document.getElementById('sheet-status');
   const emps = loadEmployees();
   const monthData = loadMonthData(currentAttYear, currentAttMonth) || {};
+
+  addDebug(`Processing for ${MONTHS_AR[currentAttMonth]} ${currentAttYear}`);
+  addDebug(`Total sheet rows: ${sheetData.length}`);
+
+  // Filter rows for current month
   const filtered = sheetData.filter(row => {
-    const d = row.date || row[0] || '';
-    const parts = d.split(/[\/\-\.]/);
-    let month, year;
-    if (parts.length >= 3) {
-      if (parseInt(parts[0]) > 31) { year = parseInt(parts[0]); month = parseInt(parts[1]) - 1; }
-      else { year = parseInt(parts[2]); month = parseInt(parts[1]) - 1; }
+    const d = normalizeDate(row.date || row[0] || '');
+    if (!d) {
+      addDebug(`Cannot parse date: "${row.date || row[0] || ''}"`);
+      return false;
     }
-    return month === currentAttMonth && year === currentAttYear;
+    return d.month === currentAttMonth && d.year === currentAttYear;
   });
+
+  addDebug(`Filtered rows for current month: ${filtered.length}`);
+
+  // Group by employee name
   const grouped = {};
   filtered.forEach(row => {
     const name = (row.name || row[2] || '').trim();
-    if (!name) return;
+    if (!name) { addDebug(`Row with empty name skipped`); return; }
     if (!grouped[name]) grouped[name] = [];
     grouped[name].push(row);
   });
+
+  addDebug(`Grouped employees: ${Object.keys(grouped).join(', ')}`);
+
+  // Match and process each employee
+  let matched = 0;
   emps.forEach(emp => {
     if (emp.type === 'doctor') return;
-    const rows = grouped[emp.name] || [];
-    if (!rows.length) return;
+    // Try exact match, then partial match
+    let rows = grouped[emp.name] || [];
+    if (!rows.length) {
+      // Try partial match (handle slight name differences)
+      const empNameClean = emp.name.replace(/\s+/g, '').toLowerCase();
+      for (const [k, v] of Object.entries(grouped)) {
+        if (k.replace(/\s+/g, '').toLowerCase() === empNameClean) {
+          rows = v;
+          addDebug(`Partial match: "${emp.name}" ↔ "${k}"`);
+          break;
+        }
+      }
+    }
+    if (!rows.length) { addDebug(`No rows for: ${emp.name}`); return; }
+    addDebug(`Processing ${emp.name}: ${rows.length} rows`);
     const stats = computeEmpStatsFromSheet(emp, rows);
     if (!monthData[emp.id]) monthData[emp.id] = {};
     Object.assign(monthData[emp.id], stats);
+    matched++;
   });
+
   saveMonthData(currentAttYear, currentAttMonth, monthData);
-  status.innerHTML = `✅ ${filtered.length} سجل محمّل – ${Object.keys(grouped).length} موظف`;
+  status.innerHTML = `✅ ${filtered.length} سجل محمّل – ${matched} موظف تم التعرف عليهم (من أصل ${Object.keys(grouped).length} اسم في الشيت)`;
+
+  if (matched === 0 && Object.keys(grouped).length > 0) {
+    const sheetNames = Object.keys(grouped).join('، ');
+    status.innerHTML += `<br><span style="color:var(--warning);font-size:12px">⚠️ أسماء في الشيت: ${sheetNames}</span>`;
+    addDebug('Names in sheet do not match employee list!');
+  }
+
   renderAttendance();
 }
 
 function computeEmpStatsFromSheet(emp, rows) {
-  const shiftHours = emp.specialHours || SHIFT_HOURS; // عدد ساعات الشيفتة الفعلية لحساب عدد الشيفتات
-  let totalMinutes = 0, fridays = 0, meals = 0, shifts = 0;
+  const shiftHours = emp.specialHours || SHIFT_HOURS;
+  const shiftMins = shiftHours * 60;
+  let totalMins = 0, fridays = 0, meals = 0, shifts = 0, extraMins = 0;
   const newLog = [];
+
   rows.forEach(row => {
-    const day      = (row.day     || row[1] || '').toLowerCase();
-    const dateRaw  =  row.date    || row[0] || '';
-    const inRaw    =  row.inTime  || row.in  || '';
-    const outRaw   =  row.outTime || row.out || '';
-    const timeField=  row.time    || row[5]  || '';
-    let inTime = inRaw, outTime = outRaw;
-    // إذا كان العمود يحتوي "HH:MM - HH:MM" افصله
-    if ((!inTime || !outTime) && (timeField.includes('-') || timeField.includes('–'))) {
-      const tp = timeField.replace('–','-').split('-').map(t=>t.trim());
-      if (tp.length===2){ inTime=tp[0]; outTime=tp[1]; }
-    }
-    // طرح الانصراف - الحضور
-    const sMin = parseTimeStr(inTime), eMin = parseTimeStr(outTime);
+    const dayField = (row.day || row[1] || '').trim();
+    const dateRaw = (row.date || row[0] || '').trim();
+    let inTime = (row.inTime || row.in || '').trim();
+    let outTime = (row.outTime || row.out || '').trim();
+
+    // Compute duration
+    const inMins = timeToMins(inTime);
+    const outMins = timeToMins(outTime);
     let durationMins = 0;
-    if (sMin!==null && eMin!==null) {
-      durationMins = ((eMin - sMin) + 1440) % 1440; // يتعامل مع عبور منتصف الليل
-    } else if (timeField && !timeField.includes('-') && !timeField.includes('–')) {
-      durationMins = parseFloat(timeField) * 60 || 0;
+
+    if (inMins !== null && outMins !== null) {
+      durationMins = outMins >= inMins ? (outMins - inMins) : (1440 - inMins + outMins);
+      addDebug(`  ${dateRaw}: ${inTime} → ${outTime} = ${durationMins} دقيقة`);
+    } else {
+      addDebug(`  ${dateRaw}: cannot parse times in="${inTime}" out="${outTime}"`);
+      return;
     }
-    if (!durationMins) return;
-    totalMinutes += durationMins;
-    const isFriday = day.includes('friday') || day.includes('جمعة') || day.includes('fri');
+
+    if (durationMins <= 0) return;
+
+    totalMins += durationMins;
+    const isFriday = dayField.includes('جمعة') || dayField.toLowerCase().includes('friday') || dayField.toLowerCase().includes('fri');
     if (isFriday) fridays++;
-    if (durationMins >= shiftHours * 60 * 2 - 30) meals++;
-    shifts += Math.floor(durationMins / (shiftHours * 60));
-    // بناء إدخال للسجل اليومي
-    const parts = dateRaw.split(/[\/\-\.]/);
+    if (durationMins >= shiftMins * 2 - 30) meals++;
+    const dayShifts = Math.floor(durationMins / shiftMins);
+    shifts += dayShifts;
+    extraMins += durationMins % shiftMins;
+
+    // Build normalized date
+    const nd = normalizeDate(dateRaw);
     let dateVal = dateRaw;
-    if (parts.length >= 3) {
-      if (parseInt(parts[0]) > 31)
-        dateVal = `${parts[0]}-${String(parts[1]).padStart(2,'0')}-${String(parts[2]).padStart(2,'0')}`;
-      else
-        dateVal = `${parts[2]}-${String(parts[1]).padStart(2,'0')}-${String(parts[0]).padStart(2,'0')}`;
+    let dateLabel = dateRaw;
+    if (nd) {
+      dateVal = `${nd.year}-${String(nd.month+1).padStart(2,'0')}-${String(nd.day).padStart(2,'0')}`;
+      dateLabel = `${nd.day}/${nd.month+1}`;
     }
-    const dObj = new Date(dateVal);
+
     newLog.push({
-      dateVal,
-      dateLabel: `${dObj.getDate()}/${dObj.getMonth()+1}`,
-      dayName: DAYS_AR[dObj.getDay()] || (row.day || row[1] || ''),
-      inTime:  inTime  || '',
-      outTime: outTime || '',
+      dateVal, dateLabel,
+      dayName: dayField || DAYS_AR[new Date(dateVal).getDay()] || '',
+      inTime, outTime,
       isFriday,
-      note: row.note || row[7] || '',
+      note: (row.note || row[7] || '').trim(),
       fromSheet: true
     });
   });
-  // دمج مع السجل اليدوي (اليدوي له الأولوية)
-  const existingLog  = loadDailyLog(emp.id, currentAttYear, currentAttMonth);
-  const manualDates  = new Set(existingLog.filter(e => !e.fromSheet).map(e => e.dateVal));
+
+  // Merge with manual entries (manual takes priority)
+  const existingLog = loadDailyLog(emp.id, currentAttYear, currentAttMonth);
+  const manualDates = new Set(existingLog.filter(e => !e.fromSheet).map(e => e.dateVal));
   const merged = [
     ...existingLog.filter(e => !e.fromSheet),
     ...newLog.filter(e => !manualDates.has(e.dateVal))
   ].sort((a, b) => a.dateVal.localeCompare(b.dateVal));
   saveDailyLog(emp.id, currentAttYear, currentAttMonth, merged);
-  const extraHours = Math.max(0, (totalMinutes / 60) - (shifts * shiftHours));
-  return { shifts, extraHours: Math.round(extraHours * 10) / 10, fridays, meals, fromSheet: true };
-}
 
-function parseTimeStr(t) {
-  t = (t || '').trim();
-  const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/);
-  if (!m) return null;
-  let h = parseInt(m[1]), min = parseInt(m[2]);
-  if (m[3]) {
-    if (m[3].toLowerCase() === 'pm' && h !== 12) h += 12;
-    if (m[3].toLowerCase() === 'am' && h === 12) h = 0;
-  }
-  return h * 60 + min;
+  return {
+    shifts,
+    extraHours: Math.round((extraMins / 60) * 10) / 10,
+    fridays,
+    meals,
+    totalHours: Math.round((totalMins / 60) * 10) / 10,
+    fromSheet: true
+  };
 }
 
 // ============ ATTENDANCE RENDER ============
@@ -656,8 +831,8 @@ function renderAttendance() {
     const meals = d.meals || 0;
     const fridays = d.fridays || 0;
     const shifts = d.shifts || 0;
+    const totalHours = d.totalHours || 0;
     totalExtra += extra; totalMeals += meals; totalFridays += fridays; totalShifts += shifts;
-    const sheetRows = getEmpSheetRows(emp);
 
     return `<div class="emp-card">
       <div class="emp-header" onclick="toggleEmp('emp-body-${emp.id}')">
@@ -665,6 +840,7 @@ function renderAttendance() {
           <div class="emp-name">${emp.name} ${emp.note ? '⚠️' : ''}</div>
           <div class="emp-stats">
             ${emp.type === 'shift' ? `<div class="stat-chip">شيفتات: <strong>${shifts}</strong></div>` : ''}
+            <div class="stat-chip">إجمالي: <strong>${totalHours}س</strong></div>
             <div class="stat-chip">إضافي: <strong>${extra}س</strong></div>
             <div class="stat-chip">جمعة: <strong>${fridays}</strong></div>
             <div class="stat-chip">وجبات: <strong>${meals}</strong></div>
@@ -678,7 +854,6 @@ function renderAttendance() {
           ${renderEmpAttInputs(emp, d)}
         </div>
         ${renderDailySection(emp, currentAttYear, currentAttMonth)}
-        ${sheetRows.length ? renderSheetLog(emp, sheetRows) : ''}
       </div>
     </div>`;
   }).join('');
@@ -692,22 +867,22 @@ function renderAttendance() {
 // ============ DAILY LOG SECTION ============
 function renderDailySection(emp, year, month) {
   const log = loadDailyLog(emp.id, year, month);
-  const sh = (emp.specialHours || SHIFT_HOURS); // عدد ساعات الشيفتة الفعلية لحساب الشيفتات والوجبات
-  let totalMins = 0, totalShifts = 0, totalExtra = 0, totalFridays = 0, totalMeals = 0;
+  const shMins = (emp.specialHours || SHIFT_HOURS) * 60;
+  let totalMins = 0, totalShifts = 0, totalExtraMins = 0, totalFridays = 0, totalMeals = 0;
   log.forEach(e => {
     const dur = calcDuration(e.inTime, e.outTime);
     totalMins += dur;
-    const s = Math.floor(dur / (sh * 60));
+    const s = Math.floor(dur / shMins);
     totalShifts += s;
-    totalExtra += Math.max(0, dur - s * sh * 60);
+    totalExtraMins += dur % shMins;
     if (e.isFriday) totalFridays++;
-    if (dur >= sh * 60 * 2 - 30) totalMeals++;
+    if (dur >= shMins * 2 - 30) totalMeals++;
   });
 
   const rows = log.map((entry, idx) => {
     const dur = calcDuration(entry.inTime, entry.outTime);
-    const isDouble = dur >= sh * 60 * 2 - 30;
-    const extraMins = Math.max(0, dur % (sh * 60));
+    const isDouble = dur >= shMins * 2 - 30;
+    const extraMins = dur % shMins;
     return `<tr class="${entry.isFriday ? 'is-friday' : ''} ${isDouble ? 'is-double' : ''}">
       <td>${entry.dateLabel || ''}</td>
       <td>${entry.dayName || ''}</td>
@@ -719,6 +894,7 @@ function renderDailySection(emp, year, month) {
         ${isDouble ? '<span class="badge-meal">وجبة</span>' : ''}
         ${extraMins > 0 ? `<span class="badge-extra">+${fmtMins(extraMins)}</span>` : ''}
         ${entry.note ? `<span style="font-size:10px;color:var(--text-muted)">${entry.note}</span>` : ''}
+        ${entry.fromSheet ? '<span style="font-size:9px;color:var(--monthly-color);background:#e0f2fe;padding:1px 4px;border-radius:6px">شيت</span>' : ''}
       </td>
       <td><button class="del-btn" onclick="deleteDailyEntry(${emp.id},${idx})">🗑</button></td>
     </tr>`;
@@ -727,40 +903,40 @@ function renderDailySection(emp, year, month) {
   return `<div class="daily-section">
     <div class="daily-section-header" onclick="toggleEmp('daily-body-${emp.id}')">
       <span>📅 سجل الحضور اليومي (${log.length} يوم)</span>
-      <span style="font-size:11px;opacity:0.8">${totalShifts} شيفتة | ${(totalExtra/60).toFixed(1)}س إضافي | ${totalFridays} جمعة</span>
+      <span style="font-size:11px;opacity:0.8">${totalShifts} شيفتة | ${fmtMins(totalExtraMins)} إضافي | ${totalFridays} جمعة</span>
     </div>
     <div class="daily-section-body" id="daily-body-${emp.id}">
       <div class="daily-stats-bar">
         <div class="daily-stat"><div class="ds-val">${log.length}</div><div class="ds-lbl">يوم عمل</div></div>
         <div class="daily-stat"><div class="ds-val">${totalShifts}</div><div class="ds-lbl">شيفتة</div></div>
         <div class="daily-stat"><div class="ds-val">${fmtMins(totalMins)}</div><div class="ds-lbl">إجمالي الوقت</div></div>
-        <div class="daily-stat"><div class="ds-val">${(totalExtra/60).toFixed(1)}س</div><div class="ds-lbl">إضافي</div></div>
+        <div class="daily-stat"><div class="ds-val">${fmtMins(totalExtraMins)}</div><div class="ds-lbl">إضافي</div></div>
         <div class="daily-stat"><div class="ds-val">${totalFridays}</div><div class="ds-lbl">جمعة</div></div>
         <div class="daily-stat"><div class="ds-val">${totalMeals}</div><div class="ds-lbl">وجبة</div></div>
       </div>
       
       <!-- Add entry form -->
       <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:10px;">
-        <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">➕ إضافة يوم حضور</div>
+        <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;">➕ إضافة يوم حضور يدوي</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;align-items:end;">
           <div>
-            <div class="fl">📅 التاريخ</div>
+            <div class="fl" style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📅 التاريخ</div>
             <input type="date" id="dd-date-${emp.id}" value="${todayStr()}" onchange="autoSetDay(${emp.id})">
           </div>
           <div>
-            <div class="fl">📆 اليوم</div>
+            <div class="fl" style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📆 اليوم</div>
             <input type="text" id="dd-day-${emp.id}" placeholder="تلقائي" readonly style="background:#f1f5f9">
           </div>
           <div>
-            <div class="fl">🕐 وقت الحضور</div>
+            <div class="fl" style="font-size:11px;color:var(--text-muted);margin-bottom:3px">🕐 وقت الحضور</div>
             <input type="time" id="dd-in-${emp.id}">
           </div>
           <div>
-            <div class="fl">🕔 وقت الانصراف</div>
+            <div class="fl" style="font-size:11px;color:var(--text-muted);margin-bottom:3px">🕔 وقت الانصراف</div>
             <input type="time" id="dd-out-${emp.id}">
           </div>
           <div>
-            <div class="fl">📝 ملاحظة</div>
+            <div class="fl" style="font-size:11px;color:var(--text-muted);margin-bottom:3px">📝 ملاحظة</div>
             <input type="text" id="dd-note-${emp.id}" placeholder="اختياري">
           </div>
           <div>
@@ -775,7 +951,7 @@ function renderDailySection(emp, year, month) {
           <thead><tr><th>التاريخ</th><th>اليوم</th><th>حضور</th><th>انصراف</th><th>المدة</th><th>ملاحظات</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
-      </div>` : '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px">لا يوجد سجل حضور بعد – أضف أول يوم</div>'}
+      </div>` : '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px">لا يوجد سجل حضور بعد – أضف أول يوم أو زامن الشيت</div>'}
     </div>
   </div>`;
 }
@@ -788,7 +964,7 @@ function todayStr() {
 function autoSetDay(empId) {
   const dateVal = document.getElementById(`dd-date-${empId}`).value;
   if (!dateVal) return;
-  const d = new Date(dateVal);
+  const d = new Date(dateVal + 'T00:00:00');
   const dayEl = document.getElementById(`dd-day-${empId}`);
   if (dayEl) dayEl.value = DAYS_AR[d.getDay()];
 }
@@ -799,7 +975,7 @@ function addDailyEntry(empId) {
   const outTime  = document.getElementById(`dd-out-${empId}`).value;
   const noteVal  = document.getElementById(`dd-note-${empId}`)?.value || '';
   if (!dateVal || !inTime || !outTime) { showToast('⚠️ أدخل التاريخ ووقت الحضور والانصراف'); return; }
-  const d = new Date(dateVal);
+  const d = new Date(dateVal + 'T00:00:00');
   const dayName = DAYS_AR[d.getDay()];
   const isFriday = d.getDay() === 5;
   const dateLabel = `${d.getDate()}/${d.getMonth()+1}`;
@@ -819,7 +995,6 @@ function addDailyEntry(empId) {
   }
   showToast('✅ تم إضافة يوم الحضور');
   renderAttendance();
-  // Re-open the panels
   setTimeout(() => {
     const b = document.getElementById(`emp-body-${empId}`);
     if (b) b.classList.add('open');
@@ -851,73 +1026,28 @@ function deleteDailyEntry(empId, idx) {
   }, 50);
 }
 
-function getEmpSheetRows(emp) {
-  return sheetData.filter(row => {
-    const name = (row.name || row[2] || '').trim();
-    const d = row.date || row[0] || '';
-    const parts = d.split(/[\/\-\.]/);
-    let month, year;
-    if (parts.length >= 3) {
-      if (parseInt(parts[0]) > 31) { year = parseInt(parts[0]); month = parseInt(parts[1]) - 1; }
-      else { year = parseInt(parts[2]); month = parseInt(parts[1]) - 1; }
-    }
-    return name === emp.name && month === currentAttMonth && year === currentAttYear;
-  });
-}
-
-function renderSheetLog(emp, rows) {
-  const shiftHours = emp.specialHours || SHIFT_HOURS; // لحساب الوجبات والشيفتات فقط
-  return `<div style="margin-top:10px">
-    <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px;">📊 سجل الشيت</div>
-    <div style="overflow-x:auto"><table class="log-table">
-      <thead><tr><th>التاريخ</th><th>اليوم</th><th>الوقت</th><th>المدة</th><th>ملاحظات</th></tr></thead>
-      <tbody>${rows.map(row => {
-        const day = (row.day || row[1] || '').toLowerCase();
-        const time = row.time || row[5] || '';
-        const isFriday = day.includes('friday') || day.includes('جمعة') || day.includes('fri');
-        let durationMins = 0;
-        if (time.includes('-') || time.includes('–')) {
-          const parts = time.replace('–', '-').split('-').map(t => t.trim());
-          if (parts.length === 2) {
-            const s = parseTimeStr(parts[0]), e = parseTimeStr(parts[1]);
-            if (s !== null && e !== null) durationMins = ((e - s) + 1440) % 1440;
-          }
-        } else durationMins = parseFloat(time) * 60 || 0;
-        const hrs = (durationMins / 60).toFixed(1);
-        const isDouble = durationMins >= shiftHours * 60 * 2 - 30;
-        const extraMins = Math.max(0, durationMins - shiftHours * 60);
-        const cls = isFriday ? 'friday' : (isDouble ? 'double' : '');
-        return `<tr class="${cls}">
-          <td>${row.date || row[0] || ''}</td><td>${row.day || row[1] || ''}</td>
-          <td>${time}</td><td>${hrs}س</td>
-          <td>${isFriday ? '<span class="badge-friday">جمعة</span>' : ''}
-              ${isDouble ? '<span class="badge-meal">وجبة</span>' : ''}
-              ${extraMins > 0 ? `<span class="badge-extra">+${(extraMins/60).toFixed(1)}س</span>` : ''}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table></div>
-  </div>`;
-}
-
 function renderEmpAttInputs(emp, d) {
   if (emp.type === 'shift') {
     return `<div class="shift-input-row">
-      <div><div class="field-label">شيفتات <small style="color:var(--success)">(محسوب تلقائياً)</small></div><input type="number" value="${d.shifts || 0}" onchange="saveAttField(${emp.id},'shifts',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">ساعات إضافي <small style="color:var(--success)">(محسوب تلقائياً)</small></div><input type="number" step="0.5" value="${d.extraHours || 0}" onchange="saveAttField(${emp.id},'extraHours',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">جمع <small style="color:var(--success)">(محسوب تلقائياً)</small></div><input type="number" value="${d.fridays || 0}" onchange="saveAttField(${emp.id},'fridays',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">وجبات <small style="color:var(--success)">(محسوب تلقائياً)</small></div><input type="number" value="${d.meals || 0}" onchange="saveAttField(${emp.id},'meals',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">سلفة ✏️</div><input type="number" value="${d.advance || 0}" onchange="saveAttField(${emp.id},'advance',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">مكافأة ✏️</div><input type="number" value="${d.bonus || 0}" onchange="saveAttField(${emp.id},'bonus',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">شيفتات <small style="color:var(--success)">(تلقائي)</small></div><input type="number" value="${d.shifts || 0}" onchange="saveAttField(${emp.id},'shifts',this.value)"></div>
+      <div><div class="field-label">إجمالي ساعات <small style="color:var(--success)">(تلقائي)</small></div><input type="number" step="0.1" value="${d.totalHours || 0}" onchange="saveAttField(${emp.id},'totalHours',this.value)"></div>
+      <div><div class="field-label">ساعات إضافي <small style="color:var(--success)">(تلقائي)</small></div><input type="number" step="0.5" value="${d.extraHours || 0}" onchange="saveAttField(${emp.id},'extraHours',this.value)"></div>
+      <div><div class="field-label">جمع <small style="color:var(--success)">(تلقائي)</small></div><input type="number" value="${d.fridays || 0}" onchange="saveAttField(${emp.id},'fridays',this.value)"></div>
+      <div><div class="field-label">وجبات <small style="color:var(--success)">(تلقائي)</small></div><input type="number" value="${d.meals || 0}" onchange="saveAttField(${emp.id},'meals',this.value)"></div>
+      <div><div class="field-label">سلفة ✏️</div><input type="number" value="${d.advance || 0}" onchange="saveAttField(${emp.id},'advance',this.value)"></div>
+      <div><div class="field-label">مكافأة ✏️</div><input type="number" value="${d.bonus || 0}" onchange="saveAttField(${emp.id},'bonus',this.value)"></div>
     </div>`;
   } else {
     return `<div class="shift-input-row">
-      <div><div class="field-label">أيام العمل الفعلية ✏️</div><input type="number" value="${d.workDays || 0}" onchange="saveAttField(${emp.id},'workDays',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">أيام غياب ✏️</div><input type="number" value="${d.absentDays || 0}" onchange="saveAttField(${emp.id},'absentDays',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">جمع <small style="color:var(--success)">(تلقائي)</small></div><input type="number" value="${d.fridays || 0}" onchange="saveAttField(${emp.id},'fridays',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">وجبات <small style="color:var(--success)">(تلقائي)</small></div><input type="number" value="${d.meals || 0}" onchange="saveAttField(${emp.id},'meals',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">ساعات إضافي <small style="color:var(--success)">(تلقائي)</small></div><input type="number" step="0.5" value="${d.extraHours || 0}" onchange="saveAttField(${emp.id},'extraHours',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">إجازات رسمية ✏️</div><input type="number" value="${d.officialDays || 0}" onchange="saveAttField(${emp.id},'officialDays',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">حوافز ✏️</div>
+      <div><div class="field-label">أيام العمل الفعلية ✏️</div><input type="number" value="${d.workDays || 0}" onchange="saveAttField(${emp.id},'workDays',this.value)"></div>
+      <div><div class="field-label">أيام غياب ✏️</div><input type="number" value="${d.absentDays || 0}" onchange="saveAttField(${emp.id},'absentDays',this.value)"></div>
+      <div><div class="field-label">جمع <small style="color:var(--success)">(تلقائي)</small></div><input type="number" value="${d.fridays || 0}" onchange="saveAttField(${emp.id},'fridays',this.value)"></div>
+      <div><div class="field-label">وجبات <small style="color:var(--success)">(تلقائي)</small></div><input type="number" value="${d.meals || 0}" onchange="saveAttField(${emp.id},'meals',this.value)"></div>
+      <div><div class="field-label">إجمالي ساعات <small style="color:var(--success)">(تلقائي)</small></div><input type="number" step="0.1" value="${d.totalHours || 0}" onchange="saveAttField(${emp.id},'totalHours',this.value)"></div>
+      <div><div class="field-label">ساعات إضافي <small style="color:var(--success)">(تلقائي)</small></div><input type="number" step="0.5" value="${d.extraHours || 0}" onchange="saveAttField(${emp.id},'extraHours',this.value)"></div>
+      <div><div class="field-label">إجازات رسمية ✏️</div><input type="number" value="${d.officialDays || 0}" onchange="saveAttField(${emp.id},'officialDays',this.value)"></div>
+      <div>
+        <div class="field-label">حوافز ✏️</div>
         <select onchange="saveAttField(${emp.id},'incentive',this.value)">
           <option value="0" ${!d.incentive?'selected':''}>—</option>
           <option value="150" ${d.incentive==150?'selected':''}>150</option>
@@ -925,12 +1055,12 @@ function renderEmpAttInputs(emp, d) {
           <option value="250" ${d.incentive==250?'selected':''}>250</option>
           <option value="350" ${d.incentive==350?'selected':''}>350</option>
           <option value="500" ${d.incentive==500?'selected':''}>500</option>
-          <option value="custom">مخصص</option>
+          <option value="custom" ${d.incentiveCustom!==undefined?'selected':''}>مخصص</option>
         </select>
         ${d.incentiveCustom !== undefined ? `<input type="number" placeholder="قيمة" value="${d.incentiveCustom||''}" onchange="saveAttField(${emp.id},'incentiveCustom',this.value)" style="margin-top:4px">` : ''}
       </div>
-      <div><div class="field-label">سلفة ✏️</div><input type="number" value="${d.advance || 0}" onchange="saveAttField(${emp.id},'advance',this.value)" style="text-align:center;"></div>
-      <div><div class="field-label">مكافأة ✏️</div><input type="number" value="${d.bonus || 0}" onchange="saveAttField(${emp.id},'bonus',this.value)" style="text-align:center;"></div>
+      <div><div class="field-label">سلفة ✏️</div><input type="number" value="${d.advance || 0}" onchange="saveAttField(${emp.id},'advance',this.value)"></div>
+      <div><div class="field-label">مكافأة ✏️</div><input type="number" value="${d.bonus || 0}" onchange="saveAttField(${emp.id},'bonus',this.value)"></div>
     </div>`;
   }
 }
@@ -989,13 +1119,13 @@ function recalcAll() {
   monthData.salarySettings.monthDays = monthDays;
   saveMonthData(currentSalYear, currentSalMonth, monthData);
 
-  // الموظفون الشهريون المستحقون للتحسين: غيابهم الكلي <= يومين (حتى لو من إجازته)
+  // ── تحديد المستحقين للتحسين: الشهريون الذين لم يتجاوز غيابهم يومين ──
   const vac = loadVacations();
   const eligibleMonthly = emps.filter(emp => {
     if (emp.type !== 'monthly') return false;
     const d = monthData[emp.id] || {};
     const absentRaw = d.absentDays || 0;
-    return absentRaw <= 2;
+    return absentRaw <= 2; // أكتر من يومين = لا يستحق
   });
   const improvementVal = eligibleMonthly.length > 0 && totalCases > 0
     ? Math.round(totalCases / eligibleMonthly.length) : 0;
@@ -1003,8 +1133,10 @@ function recalcAll() {
   document.getElementById('total-cases-display').textContent = totalCases || '—';
   document.getElementById('improvement-val').textContent = improvementVal || '—';
   document.getElementById('month-days-display').textContent = monthDays;
+
   const tbody = document.getElementById('salary-tbody');
   let grandTotal = 0;
+
   tbody.innerHTML = emps.map(emp => {
     const d = monthData[emp.id] || {};
     let base=0, fridayPay=0, extraPay=0, mealPay=0, incentive=0, improvement=0,
@@ -1013,45 +1145,48 @@ function recalcAll() {
     if (emp.type === 'doctor') {
       return `<tr class="monthly-row"><td style="text-align:right;font-weight:600">${emp.name}</td>
         <td><span class="emp-type-badge monthly">دكتور</span></td>
-        <td colspan="10" style="color:var(--text-muted);font-size:12px">حضور مرن – يُحدد يدوياً</td></tr>`;
+        <td colspan="11" style="color:var(--text-muted);font-size:12px">حضور مرن – يُحدد يدوياً</td></tr>`;
     }
 
+    const totalHours = d.totalHours || 0;
+
     if (emp.type === 'shift') {
-      // ── شيفتات ──
       const shifts = d.shifts || 0;
       base = shifts * (emp.shiftRate || 0);
-      // ⚠️ سعر الساعة الإضافية = سعر الشيفتة ÷ 6 (ثابت)
-      const hourRate = (emp.shiftRate || 0) / SHIFT_HOURS;
+      // ساعة إضافية = سعر الشيفتة ÷ ساعات الشيفتة
+      const hourRate = (emp.shiftRate || 0) / (emp.specialHours || SHIFT_HOURS);
       extraPay = (d.extraHours || 0) * hourRate;
       fridayPay = (d.fridays || 0) * (emp.fridayRate || 0);
       mealPay   = (d.meals  || 0) * MEAL_PRICE;
       advance = d.advance || 0;
       bonus   = d.bonus   || 0;
+
     } else {
       // ── شهري ──
       base = emp.salary || 0;
-      // ⚠️ سعر الساعة = المرتب ÷ أيام الشهر ÷ 6 (ثابت)
-      const hourRate = base / monthDays / SHIFT_HOURS;
+      const dailyRate = base / monthDays;
+      const hourRate = dailyRate / (emp.specialHours || SHIFT_HOURS);
       extraPay  = (d.extraHours || 0) * hourRate;
       fridayPay = (d.fridays || 0) * (emp.fridayRate || 0);
       mealPay   = (d.meals  || 0) * MEAL_PRICE;
 
+      // ── خصم الغياب مع حساب الإجازة ──
       const absentRaw  = d.absentDays || 0;
-      const dailyRate  = base / monthDays;
-      // رصيد الإجازة المتبقي
-      const vacTakenSoFar = (vac[emp.id] || {}).taken || 0;
-      const vacBalance    = Math.max(0, MAX_VACATION - vacTakenSoFar);
-      // كم يوم ممكن يتغطى من الإجازة
-      const vacUsed    = Math.min(absentRaw, vacBalance);
-      // الخصم الفعلي = فقط الأيام غير المغطاة بالإجازة
-      deductAbsent = dailyRate * (absentRaw - vacUsed);
+      const vacTaken   = (vac[emp.id] || {}).taken || 0;
+      const vacBalance = Math.max(0, MAX_VACATION - vacTaken);
+      const vacUsed    = Math.min(absentRaw, vacBalance); // أيام تغطيها الإجازة
+      const paidAbsent = absentRaw - vacUsed;             // الأيام المخصومة فعلاً
+      deductAbsent     = dailyRate * paidAbsent;
 
-      // هل يستحق حوافز/تحسين؟ الغياب الكلي > يومين = لا يستحق (حتى لو من إجازة)
+      // ── الحوافز والتحسين: فقط لمن غاب ≤ يومين ──
       const isEligible = absentRaw <= 2;
-      incentive   = isEligible
-        ? (d.incentiveCustom !== undefined ? (d.incentiveCustom || 0) : (d.incentive || 0))
-        : 0;
-      improvement = isEligible ? improvementVal : 0;
+      if (isEligible) {
+        incentive   = d.incentiveCustom !== undefined ? (d.incentiveCustom || 0) : (d.incentive || 0);
+        improvement = improvementVal;
+      } else {
+        incentive   = 0;
+        improvement = 0;
+      }
 
       advance = d.advance || 0;
       bonus   = d.bonus   || 0;
@@ -1063,29 +1198,37 @@ function recalcAll() {
     grandTotal += net;
     const cls = emp.type === 'shift' ? 'shift-row' : 'monthly-row';
 
-    // سعر الساعة للعرض (دائماً ÷ 6)
+    // عرض سبب عدم الاستحقاق
+    const absentRaw = d.absentDays || 0;
+    const notEligibleNote = (emp.type === 'monthly' && absentRaw > 2)
+      ? `<div style="font-size:9px;color:var(--danger)">غاب ${absentRaw} أيام – لا حوافز/تحسين</div>` : '';
+
+    // ساعة الإضافي للعرض
     const dispHourRate = emp.type === 'shift'
-      ? ((emp.shiftRate || 0) / SHIFT_HOURS).toFixed(1)
-      : (((emp.salary || 0) / monthDays) / SHIFT_HOURS).toFixed(1);
+      ? ((emp.shiftRate || 0) / (emp.specialHours || SHIFT_HOURS)).toFixed(1)
+      : (((emp.salary || 0) / monthDays) / (emp.specialHours || SHIFT_HOURS)).toFixed(1);
 
     return `<tr class="${cls}">
       <td style="text-align:right;font-weight:600">
         ${emp.name}
         <div style="font-size:10px;color:var(--text-muted)">س/إضافي = ${dispHourRate} جنيه</div>
+        ${notEligibleNote}
       </td>
       <td><span class="emp-type-badge ${emp.type === 'shift' ? 'shift' : 'monthly'}">${emp.type === 'shift' ? 'شيفت' : 'شهري'}</span></td>
       <td>${Math.round(base).toLocaleString()}</td>
       <td class="bonus">${Math.round(fridayPay) || '—'}</td>
       <td class="bonus">${Math.round(extraPay)  || '—'}</td>
       <td class="bonus">${Math.round(mealPay)   || '—'}</td>
-      <td class="bonus">${Math.round(incentive)  || '—'}</td>
-      <td class="bonus">${Math.round(improvement)|| '—'}</td>
-      <td class="deduction">${Math.round(deductAbsent) || '—'}</td>
+      <td class="bonus">${incentive ? Math.round(incentive) : '—'}</td>
+      <td class="bonus">${improvement ? Math.round(improvement) : '—'}</td>
+      <td class="deduction">${Math.round(deductAbsent) ? Math.round(deductAbsent) : '—'}</td>
       <td class="deduction">${Math.round(advance) || '—'}</td>
       <td class="bonus">${Math.round(bonus + deliveryBonus) || '—'}</td>
+      <td style="color:var(--primary-light);font-weight:600">${totalHours ? totalHours + 'س' : '—'}</td>
       <td class="net-salary">${Math.round(net).toLocaleString()}</td>
     </tr>`;
   }).join('');
+
   grandTotal = Math.round(grandTotal);
   document.getElementById('grand-total').textContent = grandTotal.toLocaleString();
   document.getElementById('total-salary').textContent = grandTotal.toLocaleString();
@@ -1141,7 +1284,8 @@ function renderRecord() {
         <tbody>${(r.employees||[]).map(e => `<tr>
           <td>${e.name}</td><td>${e.type==='shift'?'شيفت':'شهري'}</td>
           <td style="font-size:11px;color:var(--text-muted)">
-            ${e.type==='shift'?`${e.data.shifts||0} شيفتة`:`غياب: ${e.data.absentDays||0}`}
+            ${e.type==='shift'?`${e.data.shifts||0} شيفتة`:`غياب: ${e.data.absentDays||0} يوم`}
+            ${e.data.totalHours?` | إجمالي ساعات: ${e.data.totalHours}س`:''}
             ${e.data.extraHours?` | إضافي: ${e.data.extraHours}س`:''}
             ${e.data.meals?` | وجبات: ${e.data.meals}`:''}
           </td>
@@ -1237,16 +1381,16 @@ function renderEmpForm(emp) {
       <option value="doctor" ${emp.type==='doctor'?'selected':''}>دكتور</option>
     </select>
   </div>
-  <div id="f-salary-row" class="field-row"><label>المرتب</label><input type="number" id="f-salary" value="${emp.salary||0}"></div>
-  <div id="f-shift-row" class="field-row" style="display:none"><label>سعر الشيفتة</label><input type="number" id="f-shift-rate" value="${emp.shiftRate||0}"></div>
-  <div id="f-special-row" class="field-row" style="display:none"><label>ساعات الشيفتة</label><input type="number" id="f-special-hours" value="${emp.specialHours||6}" placeholder="6"></div>
+  <div id="f-salary-row" class="field-row" ${emp.type==='shift'?'style="display:none"':''}><label>المرتب</label><input type="number" id="f-salary" value="${emp.salary||0}"></div>
+  <div id="f-shift-row" class="field-row" ${emp.type!=='shift'?'style="display:none"':''}><label>سعر الشيفتة</label><input type="number" id="f-shift-rate" value="${emp.shiftRate||0}"></div>
+  <div id="f-special-row" class="field-row" ${emp.type!=='shift'?'style="display:none"':''}><label>ساعات الشيفتة</label><input type="number" id="f-special-hours" value="${emp.specialHours||6}" placeholder="6"></div>
   <div class="field-row"><label>سعر الجمعة</label><input type="number" id="f-friday" value="${emp.fridayRate||0}"></div>
   <div class="field-row"><label>ملاحظة</label><input type="text" id="f-note" value="${emp.note||''}"></div>
   `;
 }
 function toggleFormType() {
   const t = document.getElementById('f-type').value;
-  document.getElementById('f-salary-row').style.display = t==='monthly'||t==='doctor' ? '' : 'none';
+  document.getElementById('f-salary-row').style.display = t==='shift' ? 'none' : '';
   document.getElementById('f-shift-row').style.display = t==='shift' ? '' : 'none';
   document.getElementById('f-special-row').style.display = t==='shift' ? '' : 'none';
 }
@@ -1286,7 +1430,7 @@ function deleteEmployee(id) {
 // ============ BACKUP ============
 function backupData() {
   const data = {
-    version: 5, date: new Date().toISOString(),
+    version: 6, date: new Date().toISOString(),
     employees: loadEmployees(), record: loadRecord(),
     vacations: loadVacations(), sheetUrl: getSheetUrl(), months: {}
   };
@@ -1307,7 +1451,7 @@ function restoreData(e) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
-    if (!confirm('هل تريد استعادة البيانات؟')) return;
+    if (!confirm('هل تريد استعادة البيانات؟ سيتم استبدال البيانات الحالية.')) return;
     try {
       const data = JSON.parse(ev.target.result);
       if (data.employees) saveEmployees(data.employees);
@@ -1335,37 +1479,36 @@ function exportCSV() {
   const label = monthLabel(currentSalYear, currentSalMonth);
   let csv = '\uFEFF';
   csv += `مرتبات ${label}\n`;
-  csv += 'الموظف,النوع,الأساسي,الجمعة,الإضافي,الوجبات,الحوافز,التحسين,خصم الغياب,السلفة,المكافأة,الصافي\n';
+  csv += 'الموظف,النوع,الأساسي,الجمعة,الإضافي,الوجبات,الحوافز,التحسين,خصم الغياب,السلفة,المكافأة,إجمالي الساعات,الصافي\n';
   const totalCases = parseFloat(document.getElementById('total-cases').value) || 0;
   const vacCV = loadVacations();
   const eligible = emps.filter(e => {
     if (e.type !== 'monthly') return false;
-    const absentRaw = ((monthData[e.id]||{}).absentDays||0);
-    return absentRaw <= 2;
+    return ((monthData[e.id]||{}).absentDays||0) <= 2;
   });
   const impVal = eligible.length>0 && totalCases>0 ? Math.round(totalCases/eligible.length) : 0;
   let grand = 0;
   emps.forEach(emp => {
     if (emp.type==='doctor') return;
     const d = monthData[emp.id] || {};
+    const totalHours = d.totalHours || 0;
     let base,fridayPay,extraPay,mealPay,incentive,improvement,deductAbsent,advance,bonus;
     if (emp.type==='shift') {
       base=(d.shifts||0)*(emp.shiftRate||0);
-      // ⚠️ سعر الساعة الإضافية = سعر الشيفتة ÷ 6 (ثابت)
-      extraPay=(d.extraHours||0)*((emp.shiftRate||0)/SHIFT_HOURS);
+      extraPay=(d.extraHours||0)*((emp.shiftRate||0)/(emp.specialHours||SHIFT_HOURS));
       fridayPay=(d.fridays||0)*(emp.fridayRate||0);
       mealPay=(d.meals||0)*MEAL_PRICE;
       incentive=0; improvement=0; deductAbsent=0;
     } else {
       base=emp.salary||0;
-      // ⚠️ سعر الساعة = المرتب ÷ أيام الشهر ÷ 6 (ثابت)
-      extraPay=(d.extraHours||0)*(base/monthDays/SHIFT_HOURS);
+      const dailyRate=base/monthDays;
+      extraPay=(d.extraHours||0)*(dailyRate/(emp.specialHours||SHIFT_HOURS));
       fridayPay=(d.fridays||0)*(emp.fridayRate||0);
       mealPay=(d.meals||0)*MEAL_PRICE;
       const absentRaw=(d.absentDays||0);
       const vacBal = Math.max(0, MAX_VACATION - ((vacCV[emp.id]||{}).taken||0));
       const vacUsed = Math.min(absentRaw, vacBal);
-      deductAbsent = (base/monthDays) * (absentRaw - vacUsed);
+      deductAbsent = dailyRate * (absentRaw - vacUsed);
       const elig = absentRaw <= 2;
       incentive   = elig ? (d.incentiveCustom!==undefined?(d.incentiveCustom||0):(d.incentive||0)) : 0;
       improvement = elig ? impVal : 0;
@@ -1374,9 +1517,9 @@ function exportCSV() {
     const delivery=emp.note&&emp.note.includes('1500')?1500:0;
     const net=base+fridayPay+extraPay+mealPay+incentive+improvement+bonus+delivery-deductAbsent-advance;
     grand+=net;
-    csv+=`${emp.name},${emp.type==='shift'?'شيفتات':'شهري'},${Math.round(base)},${Math.round(fridayPay)},${Math.round(extraPay)},${Math.round(mealPay)},${Math.round(incentive)},${Math.round(improvement)},${Math.round(deductAbsent)},${Math.round(advance)},${Math.round(bonus+delivery)},${Math.round(net)}\n`;
+    csv+=`${emp.name},${emp.type==='shift'?'شيفتات':'شهري'},${Math.round(base)},${Math.round(fridayPay)},${Math.round(extraPay)},${Math.round(mealPay)},${Math.round(incentive)},${Math.round(improvement)},${Math.round(deductAbsent)},${Math.round(advance)},${Math.round(bonus+delivery)},${totalHours},${Math.round(net)}\n`;
   });
-  csv += `الإجمالي,,,,,,,,,,,${Math.round(grand)}\n`;
+  csv += `الإجمالي,,,,,,,,,,,,${Math.round(grand)}\n`;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
