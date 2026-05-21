@@ -524,7 +524,7 @@ function buildEmpBody(i,emp,inp,res,days,cases){
   } else {
     html += frow('أيام العمل الفعلية', `<input type="number" class="fi" value="${inp.work_days||0}" min="0" max="${days}" onchange="si(${i},'work_days',this.value)">`);
     // ── وجبات الشهري: أيام فوق 9 ساعات ──
-    html += frow('عدد الوجبات (أيام فوق 9 ساعات)', `<input type="number" class="fi green" value="${inp.meals||0}" min="0" onchange="si(${i},'meals',this.value)">`, '50 ج للوجبة — فوق 9 ساعات');
+    html += frow('عدد الوجبات (أيام فوق 10 ساعات)', `<input type="number" class="fi green" value="${inp.meals||0}" min="0" onchange="si(${i},'meals',this.value)">`, '50 ج للوجبة — فوق 9 ساعات');
     html += frow('أيام الغياب غير المبرر', `<input type="number" class="fi ${warn?'warn':''}" value="${inp.absence||0}" min="0" onchange="si(${i},'absence',this.value)">`);
   }
 
