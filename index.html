@@ -519,8 +519,8 @@ function buildEmpBody(i,emp,inp,res,days,cases){
 
   if(isShift){
     html += frow('عدد الشيفتات', `<input type="number" class="fi" value="${inp.shifts||0}" min="0" onchange="si(${i},'shifts',this.value)">`);
-    // ── وجبات الشيفتات: أيام حضر فيها أكتر من 9 ساعات ──
-    html += frow('عدد الوجبات (أيام فوق 9 ساعات)', `<input type="number" class="fi green" value="${inp.meals||0}" min="0" onchange="si(${i},'meals',this.value)">`, '50 ج للوجبة — فوق 9 ساعات');
+    // ── وجبات الشيفتات: أيام حضر فيها أكتر من 10 ساعات ──
+    html += frow('عدد الوجبات (أيام فوق 10 ساعات)', `<input type="number" class="fi green" value="${inp.meals||0}" min="0" onchange="si(${i},'meals',this.value)">`, '50 ج للوجبة — فوق 10 ساعات');
   } else {
     html += frow('أيام العمل الفعلية', `<input type="number" class="fi" value="${inp.work_days||0}" min="0" max="${days}" onchange="si(${i},'work_days',this.value)">`);
     // ── وجبات الشهري: أيام فوق 9 ساعات ──
