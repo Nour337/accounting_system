@@ -349,7 +349,7 @@ const MONTHS=['','يناير','فبراير','مارس','أبريل','مايو',
 const DAY_NAMES=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const SHIFT_HOURS  = 6;   // شيفت = 6 ساعات
 const MEAL_PRICE   = 50;  // 50 جنيه الوجبة
-const MEAL_MIN_HRS = 9;   // الحد الأدنى لاستحقاق الوجبة = 9 ساعات
+const MEAL_MIN_HRS = 10;   // الحد الأدنى لاستحقاق الوجبة = 10 ساعات
 
 // ════════════════════════════════════════════
 // STORAGE
@@ -902,6 +902,8 @@ function openEmpSettings(i){
     {k:'name',lbl:'الاسم',type:'text'},
     {k:'salary',lbl:'سعر الشيفتة (ج)',type:'number'},
     {k:'shift_hours',lbl:'ساعات الشيفت',type:'number',hint:'5 أو 6'},
+    {k:'friday',lbl:'سعر الجمعة (ج/جمعة)',type:'number'},
+    {k:'holiday',lbl:'سعر الإجازة الرسمية (ج/يوم)',type:'number'},
     {k:'meal_shift',lbl:'سعر وجبة (ج)',type:'number'},
   ];
   const fieldsHtml=fields.map(f=>`
